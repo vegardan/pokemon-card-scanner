@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
+import 'package:pokemon_card_scanner/pages/dataset_sources.dart';
 import 'package:pokemon_card_scanner/repositories/pokemon_card_catalog.dart';
 import 'package:pokemon_card_scanner/widgets/pokemon_card_grid.dart';
 
@@ -31,7 +32,18 @@ class _CatalogPageState extends State<CatalogPage> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Card catalog')),
+      appBar: AppBar(
+        title: const Text('Card catalog'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.source_outlined),
+            tooltip: 'Dataset sources',
+            onPressed: () {
+              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DatasetSourcesPage()));
+            },
+          ),
+        ],
+      ),
       body: FutureBuilder<List<CatalogPokemonCard>>(
         future: _catalog,
         builder: (context, snapshot) {
