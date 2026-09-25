@@ -9,7 +9,16 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  cached_network_image: ^3.4.1
   cupertino_icons: ^1.0.8
+  camera: ^0.12.1
+  csv: ^8.0.0
+  path: ^1.9.1
+  path_provider: ^2.1.5
+  sensors_plus: ^7.1.0
+  skeletonizer: ^3.0.0
+  sqflite: ^2.4.4
+  opencv_dart: ^2.2.2
 
 dev_dependencies:
   flutter_test:
@@ -18,3 +27,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/data/pokemon_cards.csv
+    - assets/pokemon_back_monochrome.png
