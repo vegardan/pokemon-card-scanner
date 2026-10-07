@@ -30,6 +30,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/data/dataset_sources.json
-    - assets/data/pokemon_cards.csv
+    - assets/data/card_catalog.csv
+    - assets/data/data_sources.json
+    - assets/data/orb_references/
     - assets/pokemon_back_monochrome.png

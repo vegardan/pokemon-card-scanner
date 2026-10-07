@@ -3,9 +3,17 @@ import 'package:flutter/services.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
 
 class PokemonCardCatalog {
-  static const _assetPath = 'assets/data/pokemon_cards.csv';
+  static const _assetPath = 'assets/data/card_catalog.csv';
 
   const PokemonCardCatalog._();
+
+  static Future<CatalogPokemonCard?> findById(String id) async {
+    final cards = await load();
+    for (final card in cards) {
+      if (card.id == id) return card;
+    }
+    return null;
+  }
 
   static Future<List<CatalogPokemonCard>> load() async {
     final csvText = await rootBundle.loadString(_assetPath);
