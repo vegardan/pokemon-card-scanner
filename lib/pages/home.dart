@@ -25,12 +25,21 @@ class _HomePageState extends State<HomePage> {
     final photos = await Navigator.of(context).push<CapturedCardImages>(MaterialPageRoute(builder: (_) => const ScanPage()));
     if (!mounted || photos == null) return;
 
-    final scannedCard = await ScannedCardRepository.instance.saveCapturedScan(frontPhotoBytes: photos.front, backPhotoBytes: photos.back);
+    final scannedCard = await ScannedCardRepository.instance.save(photos.front, photos.back, photos.catalogCard);
     if (!mounted) return;
 
     setState(() {
       _cards = _cards.then((cards) {
         cards.insert(0, scannedCard);
+        return cards;
+      });
+    });
+  }
+
+  void _removeCard(ScannedPokemonCard deletedCard) {
+    setState(() {
+      _cards = _cards.then((cards) {
+        cards.removeWhere((card) => card.scanId == deletedCard.scanId);
         return cards;
       });
     });
@@ -68,7 +77,7 @@ class _HomePageState extends State<HomePage> {
             return const Center(child: Text('No cards scanned yet'));
           }
 
-          return PokemonCardGrid(cards: cards);
+          return PokemonCardGrid(cards: cards, onCardDeleted: _removeCard);
         },
       ),
     );

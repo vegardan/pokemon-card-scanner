@@ -4,10 +4,10 @@ import 'package:pokemon_card_scanner/models/pokemon_card.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 class PokemonCardWidget extends StatefulWidget {
-  const PokemonCardWidget({super.key, required this.slotNumber, required this.card});
-
-  final int slotNumber;
   final PokemonCard card;
+  final VoidCallback? onTap;
+
+  const PokemonCardWidget({super.key, required this.card, this.onTap});
 
   @override
   State<PokemonCardWidget> createState() => _PokemonCardWidgetState();
@@ -22,17 +22,23 @@ class _PokemonCardWidgetState extends State<PokemonCardWidget> {
   ImageStream? _imageStream;
   ImageStreamListener? _imageListener;
 
-  CatalogPokemonCard? get _displayCard => widget.card.catalogCard;
+  CatalogPokemonCard get _displayCard => widget.card.catalogCard;
 
-  bool get _hasRemoteImage {
-    final imageUrl = _displayCard?.imageUrl;
-    return imageUrl != null && imageUrl.isNotEmpty;
+  ScannedPokemonCard? get _scannedCard {
+    final card = widget.card;
+    return card is ScannedPokemonCard ? card : null;
+  }
+
+  String? get _remoteImageUrl {
+    if (_scannedCard != null) return null;
+    final imageUrl = _displayCard.imageUrl;
+    return imageUrl == null || imageUrl.isEmpty ? null : imageUrl;
   }
 
   @override
   void initState() {
     super.initState();
-    _imageLoading = _hasRemoteImage;
+    _imageLoading = _remoteImageUrl != null;
   }
 
   @override
@@ -44,12 +50,7 @@ class _PokemonCardWidgetState extends State<PokemonCardWidget> {
   @override
   void didUpdateWidget(PokemonCardWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final oldDisplayCard = oldWidget.card.catalogCard;
-    if (oldDisplayCard?.imageUrl != _displayCard?.imageUrl) {
-      _imageLoading = _hasRemoteImage;
-      _imageFailed = false;
-      _listenForImage();
-    }
+    _listenForImage();
   }
 
   @override
@@ -68,8 +69,8 @@ class _PokemonCardWidgetState extends State<PokemonCardWidget> {
   }
 
   void _listenForImage() {
-    final imageUrl = _displayCard?.imageUrl;
-    if (imageUrl == null || imageUrl.isEmpty) {
+    final imageUrl = _remoteImageUrl;
+    if (imageUrl == null) {
       _removeImageListener();
       _listeningImageUrl = null;
       _imageLoading = false;
@@ -121,14 +122,13 @@ class _PokemonCardWidgetState extends State<PokemonCardWidget> {
     final colorScheme = Theme.of(context).colorScheme;
     final card = widget.card;
     final catalogCard = card.catalogCard;
-    final scannedCard = card is ScannedPokemonCard ? card : null;
+    final scannedCard = _scannedCard;
     final estimatedGrade = scannedCard?.estimatedGrading;
-    final cardTitle = catalogCard?.name ?? 'Unidentified card';
-    final setText = catalogCard?.setName ?? 'Unknown set';
+    final cardTitle = catalogCard.name;
+    final setText = catalogCard.setName;
 
     return Semantics(
-      label: '$cardTitle, $setText',
-      image: true,
+      button: widget.onTap != null,
       child: Card(
         clipBehavior: Clip.antiAlias,
         elevation: 0,
@@ -137,27 +137,30 @@ class _PokemonCardWidgetState extends State<PokemonCardWidget> {
           borderRadius: BorderRadius.circular(8),
           side: BorderSide(color: colorScheme.outlineVariant),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Container(
-                    color: colorScheme.surface,
-                    padding: const EdgeInsets.all(8),
-                    child: Opacity(
-                      opacity: 1,
-                      child: _CardImage(card: card.catalogCard, capturedImage: scannedCard?.capturedImages.first, emptyCardImage: _emptyCardImage, loading: _imageLoading, failed: _imageFailed),
+        child: InkWell(
+          onTap: widget.onTap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Container(
+                      color: colorScheme.surface,
+                      padding: const EdgeInsets.all(8),
+                      child: Opacity(
+                        opacity: 1,
+                        child: _CardImage(card: card.catalogCard, capturedImage: scannedCard?.frontImage, emptyCardImage: _emptyCardImage, loading: _imageLoading, failed: _imageFailed),
+                      ),
                     ),
-                  ),
-                  if (estimatedGrade != null) Positioned(top: 8, right: 8, child: _GradeBadge(grade: estimatedGrade)),
-                ],
+                    if (estimatedGrade != null) Positioned(top: 8, right: 8, child: _GradeBadge(grade: estimatedGrade)),
+                  ],
+                ),
               ),
-            ),
-            _CardDetails(title: cardTitle, setText: setText),
-          ],
+              _CardDetails(title: cardTitle, setText: setText),
+            ],
+          ),
         ),
       ),
     );
@@ -165,22 +168,21 @@ class _PokemonCardWidgetState extends State<PokemonCardWidget> {
 }
 
 class _CardImage extends StatelessWidget {
-  const _CardImage({required this.card, required this.capturedImage, required this.emptyCardImage, required this.loading, required this.failed});
-
-  final CatalogPokemonCard? card;
+  final CatalogPokemonCard card;
   final ImageProvider? capturedImage;
   final ImageProvider emptyCardImage;
   final bool loading;
   final bool failed;
 
+  const _CardImage({required this.card, required this.capturedImage, required this.emptyCardImage, required this.loading, required this.failed});
+
   @override
   Widget build(BuildContext context) {
-    final imageUrl = card?.imageUrl;
+    final imageUrl = card.imageUrl;
+    if (capturedImage != null) {
+      return _CapturedCardImage(image: capturedImage!, emptyCardImage: emptyCardImage);
+    }
     if (imageUrl == null || imageUrl.isEmpty) {
-      if (capturedImage != null) {
-        return _CapturedCardImage(image: capturedImage!, emptyCardImage: emptyCardImage);
-      }
-
       return Image(image: emptyCardImage, fit: BoxFit.contain, excludeFromSemantics: true);
     }
 
@@ -208,10 +210,10 @@ class _CardImage extends StatelessWidget {
 }
 
 class _CapturedCardImage extends StatelessWidget {
-  const _CapturedCardImage({required this.image, required this.emptyCardImage});
-
   final ImageProvider image;
   final ImageProvider emptyCardImage;
+
+  const _CapturedCardImage({required this.image, required this.emptyCardImage});
 
   @override
   Widget build(BuildContext context) {
@@ -244,10 +246,10 @@ class _CapturedCardImage extends StatelessWidget {
 }
 
 class _CardBackSkeleton extends StatelessWidget {
-  const _CardBackSkeleton({required this.emptyCardImage, required this.opacity});
-
   final ImageProvider emptyCardImage;
   final double opacity;
+
+  const _CardBackSkeleton({required this.emptyCardImage, required this.opacity});
 
   @override
   Widget build(BuildContext context) {
@@ -280,10 +282,10 @@ class _CardBackSkeleton extends StatelessWidget {
 }
 
 class _CardDetails extends StatelessWidget {
-  const _CardDetails({required this.title, required this.setText});
-
   final String title;
   final String setText;
+
+  const _CardDetails({required this.title, required this.setText});
 
   @override
   Widget build(BuildContext context) {
@@ -310,9 +312,9 @@ class _CardDetails extends StatelessWidget {
 }
 
 class _GradeBadge extends StatelessWidget {
-  const _GradeBadge({required this.grade});
-
   final int grade;
+
+  const _GradeBadge({required this.grade});
 
   Color get _gradeColor {
     final normalizedGrade = grade.clamp(1, 10) / 10;

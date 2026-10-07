@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
+import 'package:pokemon_card_scanner/pages/card_details.dart';
 import 'package:pokemon_card_scanner/widgets/pokemon_card_widget.dart';
 
 class PokemonCardGrid extends StatelessWidget {
-  const PokemonCardGrid({super.key, required this.cards});
-
   final List<PokemonCard> cards;
+  final ValueChanged<ScannedPokemonCard>? onCardDeleted;
+
+  const PokemonCardGrid({super.key, required this.cards, this.onCardDeleted});
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +17,17 @@ class PokemonCardGrid extends StatelessWidget {
       itemCount: cards.length,
       itemBuilder: (context, index) {
         final card = cards[index];
-        return PokemonCardWidget(key: ObjectKey(card), slotNumber: index + 1, card: card);
+
+        return PokemonCardWidget(
+          key: ObjectKey(card),
+          card: card,
+          onTap: () async {
+            final deleted = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => CardDetailsPage(card)));
+            if (deleted == true && card is ScannedPokemonCard) {
+              onCardDeleted?.call(card);
+            }
+          },
+        );
       },
     );
   }

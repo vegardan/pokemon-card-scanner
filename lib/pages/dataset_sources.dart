@@ -16,7 +16,7 @@ class _DatasetSourcesPageState extends State<DatasetSourcesPage> {
   @override
   void initState() {
     super.initState();
-    _citations = rootBundle.loadString('assets/data/dataset_sources.json').then((contents) => List<String>.from(jsonDecode(contents) as List));
+    _citations = rootBundle.loadString('assets/data/data_sources.json').then((contents) => List<String>.from(jsonDecode(contents) as List));
   }
 
   @override
