@@ -51,5 +51,16 @@ app.*.map.json
 # Signing
 android/app/upload-keystore.jks
 android/key.properties
+
+# Python dataset tools
+.venv/
+venv/
+env/
+__pycache__/
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
 # Widget Preview related
 .widget_preview/
