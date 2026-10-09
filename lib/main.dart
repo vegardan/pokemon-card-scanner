@@ -19,7 +19,9 @@ class App extends StatelessWidget {
         useMaterial3: true,
       ),
       darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2459A9), brightness: Brightness.dark),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2459A9), brightness: Brightness.dark).copyWith(surface: Colors.black),
+        scaffoldBackgroundColor: Colors.black,
+        appBarTheme: const AppBarTheme(backgroundColor: Colors.black, surfaceTintColor: Colors.transparent),
         useMaterial3: true,
       ),
       home: const HomePage(),
