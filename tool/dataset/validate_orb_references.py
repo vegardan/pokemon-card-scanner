@@ -3,13 +3,10 @@
 import argparse
 import base64
 import gzip
-import json
-from pathlib import Path
-import struct
 import hashlib
+import json
 import math
-
-import numpy as np
+from pathlib import Path
 
 
 def validate_structure(assets):
@@ -35,26 +32,11 @@ def validate_structure(assets):
         raise ValueError("Invalid index size")
     if hashlib.sha256(data).hexdigest()[:16] != manifest["index_id"]:
         raise ValueError("Invalid index digest")
-    count, shard_size, features = struct.unpack_from("<III", data, 4)
-    if data[:4] != b"ORBI" or (count, shard_size, features) != (
-            len(ids),
-            8,
-            96,
-    ):
-        raise ValueError("Invalid index header")
-    offsets = np.frombuffer(data, dtype="<u4", count=4 * 65536 + 1, offset=16)
-    if offsets[0] != 0 or (offsets[1:] < offsets[:-1]).any():
-        raise ValueError("Invalid postings offsets")
-    if int(offsets[-1]) != count * features * 4:
-        raise ValueError("Unexpected postings count")
-    bank_start = 16 + (4 * 65536 + 1) * 4 + int(offsets[-1]) * 4
-    if bank_start + count * features * 32 != len(data):
-        raise ValueError("Invalid descriptor bank size")
-    postings = np.frombuffer(
-        data, dtype="<u4", count=int(offsets[-1]), offset=16 + (4 * 65536 + 1) * 4
-    )
-    if len(postings) and int(postings.max()) >= count * features:
-        raise ValueError("Invalid descriptor posting")
+    count = len(ids)
+    if manifest.get("features_per_card") != 96:
+        raise ValueError("Unsupported descriptor format")
+    if len(data) != count * 96 * 32:
+        raise ValueError("Invalid catalog descriptor size")
     expected_files = {"manifest.json", "back.json.gz"} | {
         f"retrieval_{i:03d}.bin" for i in range(manifest["index_chunks"])
     }

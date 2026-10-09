@@ -1,25 +1,15 @@
 """Build bounded ORB shards and the binary index from fresh references."""
 
-from array import array
 import base64
 import csv
 import gzip
 import hashlib
 import json
 from pathlib import Path
-import struct
-import sys
 
-TABLES = 4
-KEYS = 1 << 16
 SHARD_SIZE = 8
 FEATURES = 384
 INDEX_FEATURES = 96
-
-
-def signature(descriptor, table):
-    # Same byte positions and bit order as OrbIndex in Dart.
-    return descriptor[table * 8] | (descriptor[table * 8 + 5] << 8)
 
 
 def pack_references(references, catalog, output):
@@ -32,7 +22,6 @@ def pack_references(references, catalog, output):
         )
     with catalog.open(encoding="utf-8-sig", newline="") as file:
         catalog_ids = {r["id"] for r in csv.DictReader(file)}
-    buckets = [array("I") for _ in range(TABLES * KEYS)]
     ids, shard, seen = [], [], set()
     bank = bytearray()
 
@@ -76,7 +65,6 @@ def pack_references(references, catalog, output):
             remaining[i * len(remaining) // extra_count] for i in range(extra_count)
         )
         selected = [descriptors[i * 32: (i + 1) * 32] for i in chosen]
-        number = len(ids)
         retrieval_count = min(256, len(points))
         retrieval_positions = [
             i * retrieval_count // INDEX_FEATURES * len(points) // retrieval_count
@@ -84,11 +72,6 @@ def pack_references(references, catalog, output):
         ]
         indexed = [descriptors[i * 32: (i + 1) * 32] for i in retrieval_positions]
         bank.extend(b"".join(indexed))
-        for table in range(TABLES):
-            for feature, descriptor in enumerate(indexed):
-                buckets[table * KEYS + signature(descriptor, table)].append(
-                    number * INDEX_FEATURES + feature
-                )
         # Convert normalized keypoints to the fixed coordinate basis used by Dart.
         shard.append(
             {
@@ -108,21 +91,8 @@ def pack_references(references, catalog, output):
         write_shard()
     if not ids:
         raise ValueError("Empty database")
-    offsets = array("I", [0])
-    postings = array("I")
-    for bucket in buckets:
-        postings.extend(bucket)
-        offsets.append(len(postings))
-    if sys.byteorder != "little":
-        offsets.byteswap()
-        postings.byteswap()
-    index = (
-            b"ORBI"
-            + struct.pack("<III", len(ids), SHARD_SIZE, INDEX_FEATURES)
-            + offsets.tobytes()
-            + postings.tobytes()
-            + bank
-    )
+    # Plain ORB descriptor rows: no header, buckets or postings.
+    index = bytes(bank)
     if len(index) > 128 * 1024 * 1024:
         raise ValueError("Index exceeds the 128 MiB memory budget")
     digest = hashlib.sha256(index).hexdigest()[:16]
@@ -134,6 +104,7 @@ def pack_references(references, catalog, output):
         json.dumps(
             {
                 "index_id": digest,
+                "features_per_card": INDEX_FEATURES,
                 "index_bytes": len(index),
                 "index_chunks": (len(index) + 1024 * 1024 - 1) // (1024 * 1024),
                 "shard_size": SHARD_SIZE,
