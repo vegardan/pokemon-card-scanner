@@ -7,6 +7,7 @@ import 'package:pokemon_card_scanner/widgets/pokemon_card_grid.dart';
 import 'package:pokemon_card_scanner/repositories/pokemon_card_catalog.dart';
 import 'package:pokemon_card_scanner/pages/centering_test.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:pokemon_card_scanner/widgets/photo_guide.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -65,6 +66,11 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Row(children: [Icon(Icons.catching_pokemon_outlined), SizedBox(width: 6), Text('Pokémon Card Scanner')]),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: 'How to take the photo',
+            onPressed: () => showPhotoGuide(context),
+          ),
           IconButton(
             icon: const Icon(Icons.list_outlined),
             onPressed: () {
