@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:opencv_dart/opencv_dart.dart' as cv;
+import 'package:pokemon_card_scanner/centering/card_finder.dart';
 
 /// Test page for the centering feature without camera: pick a card photo from
 /// the gallery and run the centering steps on it.
@@ -17,6 +18,8 @@ class CenteringTestPage extends StatefulWidget {
 class _CenteringTestPageState extends State<CenteringTestPage> {
   Uint8List? _photoBytes;
   String _info = 'Pick a photo of a card to start.';
+  String _prepInfo = '';
+  String _otsuInfo = '';
 
   @override
   void initState() {
@@ -33,12 +36,25 @@ class _CenteringTestPageState extends State<CenteringTestPage> {
 
   void _showPhoto(Uint8List bytes) {
     final image = cv.imdecode(bytes, cv.IMREAD_COLOR);
+
+    final prepared = prepForCardFinding(image);
+
+    final (otsuValue, mask) = seperateCard(prepared);
+
+    final (_, resultBytes) = cv.imencode('.jpg', mask);
+
     final info = 'OpenCV read the photo: ${image.cols} × ${image.rows} px, ${image.channels} channels';
+    final prepInfo = 'Photo after preparation: ${prepared.cols} × ${prepared.rows} px, ${prepared.channels} channels';
+    final otsuInfo = 'Photo after otsu/separation: ${mask.cols} × ${mask.rows} px, ${mask.channels} channels';
     image.dispose();
+    prepared.dispose();
+    mask.dispose();
 
     setState(() {
-      _photoBytes = bytes;
+      _photoBytes = resultBytes;
       _info = info;
+      _prepInfo = prepInfo;
+      _otsuInfo = otsuInfo;
     });
   }
 
@@ -58,6 +74,8 @@ class _CenteringTestPageState extends State<CenteringTestPage> {
           Text(_info),
           const SizedBox(height: 12),
           if (photo != null) Image.memory(photo),
+          Text(_prepInfo),
+          Text(_otsuInfo),
         ],
       ),
     );
