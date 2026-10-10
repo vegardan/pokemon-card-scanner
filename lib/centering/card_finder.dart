@@ -20,6 +20,9 @@ cv.Mat prepForLabCardFinding(cv.Mat image) {
   final shrunkenImage = resize(image, shrinkWidth);
   final smoothedImage = blur(shrunkenImage, blurKernelSize);
   final labColorImage = cv.cvtColor(smoothedImage, cv.COLOR_BGR2Lab);
+
+  shrunkenImage.dispose();
+  smoothedImage.dispose();
   return labColorImage;
 }
 
@@ -73,4 +76,23 @@ cv.Mat cleanMask(cv.Mat mask, int kernelSize) {
   cleaningKernel.dispose();
   opened.dispose();
   return cleaned;
+}
+
+/// Finds the outline (contour) of the biggest white shape in the mask, which should be the card
+/// Returns all outlines and the index of the biggest one (-1 if no shapes are found)
+(cv.Contours, int) findBiggestContour(cv.Mat cleanedMask) {
+  //trace the outer outline of every white shape (holes inside the card are ignored)
+  final (contours, hierarchy) = cv.findContours(cleanedMask, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+  hierarchy.dispose();
+  //go through every outline and remember the biggest one
+  var biggestIndex = -1;
+  var biggestArea = 0.0;
+  for (var i = 0; i < contours.length; i++) {
+    final area = cv.contourArea(contours[i]);
+    if (area > biggestArea) {
+      biggestArea = area;
+      biggestIndex = i;
+    }
+  }
+  return (contours, biggestIndex);
 }

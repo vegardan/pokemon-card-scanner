@@ -55,11 +55,24 @@ class _CenteringTestPageState extends State<CenteringTestPage> {
     final cleanedMask = cleanMask(mask, cleanKernelSize);
     addStep('Cleaned mask, kernel size: $cleanKernelSize', cleanedMask);
 
+    final (contours, cardIndex) = findBiggestContour(cleanedMask);
+    final shrunkenPhoto = resize(image, shrinkWidth);
+    if (cardIndex >= 0) {
+      final cardArea = cv.contourArea(contours[cardIndex]);
+      final percentOfPhoto = cardArea/(shrunkenPhoto.cols * shrunkenPhoto.rows) * 100;
+      cv.drawContours(shrunkenPhoto, contours, cardIndex, cv.Scalar(0, 255, 0), thickness: 3);
+      addStep('Biggest contour = card (green). ${contours.length} shapes found. Biggest shape (Card) covers ${percentOfPhoto.round()}% of the photo', shrunkenPhoto);
+    } else {
+      addStep('No shape found', shrunkenPhoto);
+    }
+
     image.dispose();
     labImage.dispose();
     differenceImage.dispose();
     mask.dispose();
     cleanedMask.dispose();
+    shrunkenPhoto.dispose();
+    contours.dispose();
 
     setState(() => _steps = steps);
   }
