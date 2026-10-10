@@ -42,14 +42,19 @@ class _CenteringTestPageState extends State<CenteringTestPage> {
     final image = cv.imdecode(bytes, cv.IMREAD_COLOR);
     steps.add(_Step('Original: ${image.cols} × ${image.rows} px', bytes));
 
-    final prepared = prepForCardFinding(image);
-    addStep('Photo after prep: shrink + gray + blur: ${prepared.cols} × ${prepared.rows} px. Kernel size blur: $blurKernelSize', prepared);
+    final labImage = prepForLabCardFinding(image);
+    addStep('Photo after prep: shrink, blur and convert to Lab. ${labImage.cols} × ${labImage.rows} px. Kernel size blur: $blurKernelSize', labImage);
 
-    final (otsuValue, mask) = seperateCard(prepared);
-    addStep('Otsu threshold = ${otsuValue.round()}', mask);
+    final backgroundLab = backgroundColor(labImage, backgroundStripWidth);
+    final differenceImage = differenceFromBackground(labImage, backgroundLab);
+    addStep('Difference from background (bg L=${backgroundLab.val1.round()} a=${backgroundLab.val2.round()} b=${backgroundLab.val3.round()}). Strip width used around the edge: $backgroundStripWidth', differenceImage);
+
+    final mask = seperateByFixedThreshold(differenceImage, fixedCutOffThreshold);
+    addStep('Fixed cut-off ${fixedCutOffThreshold.round()} on difference', mask);
 
     image.dispose();
-    prepared.dispose();
+    labImage.dispose();
+    differenceImage.dispose();
     mask.dispose();
 
     setState(() => _steps = steps);
