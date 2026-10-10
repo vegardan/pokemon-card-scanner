@@ -4,6 +4,7 @@ import 'package:pokemon_card_scanner/pages/catalog.dart';
 import 'package:pokemon_card_scanner/pages/scan/scan.dart';
 import 'package:pokemon_card_scanner/repositories/scanned_card_repository.dart';
 import 'package:pokemon_card_scanner/widgets/pokemon_card_grid.dart';
+import 'package:pokemon_card_scanner/repositories/pokemon_card_catalog.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -25,7 +26,10 @@ class _HomePageState extends State<HomePage> {
     final photos = await Navigator.of(context).push<CapturedCardImages>(MaterialPageRoute(builder: (_) => const ScanPage()));
     if (!mounted || photos == null) return;
 
-    final scannedCard = await ScannedCardRepository.instance.save(photos.front, photos.back, photos.catalogCard);
+    //final scannedCard = await ScannedCardRepository.instance.save(photos.front, photos.back, photos.catalogCard);
+    // TEMP (Karen): placeholder until Vegard pushes card recognition. Remove before merging.
+    final placeholderCard = (await PokemonCardCatalog.load()).first;
+    final scannedCard = await ScannedCardRepository.instance.save(photos.front, photos.back, placeholderCard);
     if (!mounted) return;
 
     setState(() {
