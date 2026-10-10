@@ -52,10 +52,14 @@ class _CenteringTestPageState extends State<CenteringTestPage> {
     final mask = seperateByFixedThreshold(differenceImage, fixedCutOffThreshold);
     addStep('Fixed cut-off ${fixedCutOffThreshold.round()} on difference', mask);
 
+    final cleanedMask = cleanMask(mask, cleanKernelSize);
+    addStep('Cleaned mask, kernel size: $cleanKernelSize', cleanedMask);
+
     image.dispose();
     labImage.dispose();
     differenceImage.dispose();
     mask.dispose();
+    cleanedMask.dispose();
 
     setState(() => _steps = steps);
   }

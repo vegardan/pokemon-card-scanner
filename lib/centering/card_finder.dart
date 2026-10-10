@@ -4,6 +4,7 @@ const shrinkWidth = 800; //less pixels is faster to work with
 const blurKernelSize = 15; //chosen from testing 5/9/15/21, fewer holes while keeping some edge sharpness
 const double fixedCutOffThreshold = 25; //chosen after testing 25/35/45 in different lightings
 const backgroundStripWidth = 20;
+const cleanKernelSize = 23; //chosen from testing 11-23
 
 cv.Mat resize(cv.Mat image, int width) {
   final height = (image.rows * (width/image.cols)).round();
@@ -58,4 +59,18 @@ cv.Mat differenceFromBackground(cv.Mat labImage, cv.Scalar backgroundLab) {
 cv.Mat seperateByFixedThreshold(cv.Mat differenceImage, double cutoff) {
   final (_, mask) = cv.threshold(differenceImage, cutoff, 255, cv.THRESH_BINARY);
   return mask;
+}
+
+/// Cleans the mask: opening removes small specks, closing fills small holes
+cv.Mat cleanMask(cv.Mat mask, int kernelSize) {
+  //structuring element: a square of kernelSize x kernelSize pixels
+  final cleaningKernel = cv.getStructuringElement(cv.MORPH_RECT, (kernelSize, kernelSize));
+  //opening = erode then dilate (removes white specks smaller than the cleaning kernel)
+  final opened = cv.morphologyEx(mask, cv.MORPH_OPEN, cleaningKernel);
+  //closing = dilate then erode (fills black holes smaller than the cleaning kernel)
+  final cleaned = cv.morphologyEx(opened, cv.MORPH_CLOSE, cleaningKernel);
+
+  cleaningKernel.dispose();
+  opened.dispose();
+  return cleaned;
 }
