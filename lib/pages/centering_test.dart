@@ -16,10 +16,7 @@ class CenteringTestPage extends StatefulWidget {
 }
 
 class _CenteringTestPageState extends State<CenteringTestPage> {
-  Uint8List? _photoBytes;
-  String _info = 'Pick a photo of a card to start.';
-  String _prepInfo = '';
-  String _otsuInfo = '';
+  List<_Step> _steps = [];
 
   @override
   void initState() {
@@ -35,32 +32,31 @@ class _CenteringTestPageState extends State<CenteringTestPage> {
   }
 
   void _showPhoto(Uint8List bytes) {
+    final steps = <_Step>[];
+
+    void addStep(String title, cv.Mat mat) {
+      final (_, jpg) = cv.imencode('.jpg', mat);
+      steps.add(_Step(title, jpg));
+    }
+
     final image = cv.imdecode(bytes, cv.IMREAD_COLOR);
+    steps.add(_Step('Original: ${image.cols} × ${image.rows} px', bytes));
 
     final prepared = prepForCardFinding(image);
+    addStep('Photo after prep: shrink + gray + blur: ${prepared.cols} × ${prepared.rows} px. Kernel size blur: $blurKernelSize', prepared);
 
     final (otsuValue, mask) = seperateCard(prepared);
+    addStep('Otsu threshold = ${otsuValue.round()}', mask);
 
-    final (_, resultBytes) = cv.imencode('.jpg', mask);
-
-    final info = 'OpenCV read the photo: ${image.cols} × ${image.rows} px, ${image.channels} channels';
-    final prepInfo = 'Photo after preparation: ${prepared.cols} × ${prepared.rows} px, ${prepared.channels} channels';
-    final otsuInfo = 'Photo after otsu/separation: ${mask.cols} × ${mask.rows} px, ${mask.channels} channels';
     image.dispose();
     prepared.dispose();
     mask.dispose();
 
-    setState(() {
-      _photoBytes = resultBytes;
-      _info = info;
-      _prepInfo = prepInfo;
-      _otsuInfo = otsuInfo;
-    });
+    setState(() => _steps = steps);
   }
 
   @override
   Widget build(BuildContext context) {
-    final photo = _photoBytes;
     return Scaffold(
       appBar: AppBar(title: const Text('Centering test')),
       floatingActionButton: FloatingActionButton.extended(
@@ -71,13 +67,21 @@ class _CenteringTestPageState extends State<CenteringTestPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(_info),
-          const SizedBox(height: 12),
-          if (photo != null) Image.memory(photo),
-          Text(_prepInfo),
-          Text(_otsuInfo),
+          if (_steps.isEmpty) const Text('Pick a photo of a card to start.'),
+          for (final step in _steps) ...[
+            Text(step.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Image.memory(step.image),
+            const SizedBox(height: 24),
+          ],
         ],
       ),
     );
   }
+}
+
+class _Step {
+  final String title;
+  final Uint8List image;
+  const _Step(this.title, this.image);
 }

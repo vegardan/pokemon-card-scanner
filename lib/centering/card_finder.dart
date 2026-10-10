@@ -1,5 +1,7 @@
 import 'package:opencv_dart/opencv_dart.dart' as cv;
 
+const blurKernelSize = 15;
+
 cv.Mat grayscale(cv.Mat image) {
   final gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY);
   return gray;
@@ -19,7 +21,7 @@ cv.Mat blur(cv.Mat image, int kernelSize) {
 cv.Mat prepForCardFinding(cv.Mat image) {
   final shrunkenImage = resize(image, 800);
   final grayImage = grayscale(shrunkenImage);
-  final smoothedImage = blur(grayImage, 15);
+  final smoothedImage = blur(grayImage, blurKernelSize);
   return smoothedImage;
 }
 
