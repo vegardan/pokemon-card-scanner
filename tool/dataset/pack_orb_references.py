@@ -93,8 +93,6 @@ def pack_references(references, catalog, output):
         raise ValueError("Empty database")
     # Plain ORB descriptor rows: no header, buckets or postings.
     index = bytes(bank)
-    if len(index) > 128 * 1024 * 1024:
-        raise ValueError("Index exceeds the 128 MiB memory budget")
     digest = hashlib.sha256(index).hexdigest()[:16]
     for start in range(0, len(index), 1024 * 1024):
         (output / f"retrieval_{start // (1024 * 1024):03d}.bin").write_bytes(

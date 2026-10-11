@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:pokemon_card_scanner/models/jpeg_data.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
 import 'package:pokemon_card_scanner/pages/catalog.dart';
 import 'package:pokemon_card_scanner/pages/scan/scan.dart';
+import 'package:pokemon_card_scanner/pages/scan/scan_guide.dart';
+import 'package:pokemon_card_scanner/repositories/app_preferences.dart';
 import 'package:pokemon_card_scanner/repositories/scanned_card_repository.dart';
 import 'package:pokemon_card_scanner/widgets/pokemon_card_grid.dart';
 
@@ -22,10 +25,22 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _scanCard() async {
-    final photos = await Navigator.of(context).push<CapturedCardImages>(MaterialPageRoute(builder: (_) => const ScanPage()));
+    final skipGuide = await AppPreferences.skipScanGuide();
+
+    if (!mounted) return;
+
+    if (!skipGuide) {
+      final ready = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const ScanGuidePage(showSkipOption: true)));
+
+      if (!mounted || ready != true) return;
+    }
+
+    final photos = await Navigator.of(context).push<({JpegData front, JpegData back, CatalogPokemonCard catalogCard})>(MaterialPageRoute(builder: (_) => const ScanPage()));
+
     if (!mounted || photos == null) return;
 
     final scannedCard = await ScannedCardRepository.instance.save(photos.front, photos.back, photos.catalogCard);
+
     if (!mounted) return;
 
     setState(() {

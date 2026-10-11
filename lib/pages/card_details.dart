@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
 import 'package:pokemon_card_scanner/repositories/scanned_card_repository.dart';
+import 'package:pokemon_card_scanner/vision/card_constants.dart';
 import 'package:pokemon_card_scanner/widgets/image_carousel/image_carousel.dart';
 
 class CardDetailsPage extends StatelessWidget {
@@ -31,9 +32,10 @@ class CardDetailsPage extends StatelessWidget {
           _DetailRow(label: 'Card ID', value: catalogCard.id),
           if (scannedCard != null) ...[
             _DetailRow(label: 'Estimated grade', value: scannedCard.estimatedGrading?.toString() ?? 'Not available'),
-            _DetailRow(label: 'Scanned', value: _formatDate(scannedCard.createdAt)),
-          ],
-          if (scannedCard != null) ...[
+            _DetailRow(
+              label: 'Scanned',
+              value: '${MaterialLocalizations.of(context).formatShortDate(scannedCard.createdAt.toLocal())} ${TimeOfDay.fromDateTime(scannedCard.createdAt.toLocal()).format(context)}',
+            ),
             const SizedBox(height: 16),
             OutlinedButton.icon(
               onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CardDetailsPage(catalogCard))),
@@ -44,12 +46,6 @@ class CardDetailsPage extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String _formatDate(DateTime value) {
-    final local = value.toLocal();
-    String twoDigits(int number) => number.toString().padLeft(2, '0');
-    return '${local.year}-${twoDigits(local.month)}-${twoDigits(local.day)} ${twoDigits(local.hour)}:${twoDigits(local.minute)}';
   }
 
   Future<void> _deleteCard(BuildContext context, ScannedPokemonCard card) async {
@@ -73,9 +69,11 @@ class CardDetailsPage extends StatelessWidget {
 
     try {
       await ScannedCardRepository.instance.delete(card);
+
       if (context.mounted) Navigator.pop(context, true);
     } catch (_) {
       if (!context.mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not delete the card. Please try again.')));
     }
   }
@@ -93,6 +91,7 @@ class _CardImageCarousel extends StatelessWidget {
     final items = <ImageCarouselItem>[
       if (scannedCard != null) ...[ImageCarouselItem(imageProvider: scannedCard.frontImage, semanticLabel: 'Front'), ImageCarouselItem(imageProvider: scannedCard.backImage, semanticLabel: 'Back')],
     ];
+
     if (items.isEmpty) {
       items.add(
         ImageCarouselItem(
@@ -105,7 +104,7 @@ class _CardImageCarousel extends StatelessWidget {
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 360),
       child: LayoutBuilder(
-        builder: (context, constraints) => ImageCarousel(items: items, height: constraints.maxWidth * 3.5 / 2.5, fit: BoxFit.contain, showLabels: scannedCard != null),
+        builder: (context, constraints) => ImageCarousel(items: items, height: constraints.maxWidth / CardConstants.cardAspectRatio, fit: BoxFit.contain, showLabels: scannedCard != null),
       ),
     );
   }

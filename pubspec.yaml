@@ -16,11 +16,13 @@ dependencies:
   path: ^1.9.1
   path_provider: ^2.1.5
   sensors_plus: ^7.1.0
+  shared_preferences: ^2.5.6
   skeletonizer: ^3.0.0
   sqflite: ^2.4.4
   opencv_dart: ^2.2.2
   carousel_slider: ^5.1.2
   photo_view: ^0.15.0
+  cancellation_token: ^2.0.1
 
 dev_dependencies:
   flutter_test:
@@ -34,3 +36,12 @@ flutter:
     - assets/data/data_sources.json
     - assets/data/orb_references/
     - assets/pokemon_back_monochrome.png
+
+hooks:
+  user_defines:
+    dartcv4:
+      include_modules:
+        - imgcodecs
+        - imgproc
+        - features2d
+        - calib3d

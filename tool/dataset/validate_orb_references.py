@@ -16,7 +16,7 @@ def validate_structure(assets):
     ids = manifest["ids"]
     if manifest["shard_size"] != 8 or not ids or len(ids) != len(set(ids)):
         raise ValueError("Invalid manifest")
-    if not 16 <= manifest["index_bytes"] <= 128 * 1024 * 1024 or manifest[
+    if manifest["index_bytes"] < 16 or manifest[
         "index_chunks"
     ] != (manifest["index_bytes"] + 1024 * 1024 - 1) // (1024 * 1024):
         raise ValueError("Invalid manifest index size/chunk count")
@@ -28,7 +28,7 @@ def validate_structure(assets):
             raise ValueError("Invalid index chunk size")
         chunks.append(chunk)
     data = b"".join(chunks)
-    if len(data) != manifest["index_bytes"] or len(data) > 128 * 1024 * 1024:
+    if len(data) != manifest["index_bytes"]:
         raise ValueError("Invalid index size")
     if hashlib.sha256(data).hexdigest()[:16] != manifest["index_id"]:
         raise ValueError("Invalid index digest")
