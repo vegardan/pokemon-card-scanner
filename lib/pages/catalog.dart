@@ -61,6 +61,7 @@ class _CatalogPageState extends State<CatalogPage> {
           }
 
           final catalogCards = snapshot.data;
+
           if (catalogCards == null) {
             return const Center(child: CircularProgressIndicator());
           }

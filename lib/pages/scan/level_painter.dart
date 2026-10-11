@@ -20,9 +20,11 @@ class LevelPainter extends CustomPainter {
     canvas.drawLine(center - const Offset(0, 20), center + const Offset(0, 20), paint);
 
     var displacement = _offset * 12;
+
     if (displacement.distance > 36) {
       displacement = displacement / displacement.distance * 36;
     }
+
     paint.style = PaintingStyle.fill;
     canvas.drawCircle(center + displacement, 6, paint);
   }

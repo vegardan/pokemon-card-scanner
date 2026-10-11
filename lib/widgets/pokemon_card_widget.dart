@@ -3,132 +3,25 @@ import 'package:flutter/material.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
-class PokemonCardWidget extends StatefulWidget {
+class PokemonCardWidget extends StatelessWidget {
   final PokemonCard card;
   final VoidCallback? onTap;
 
   const PokemonCardWidget({super.key, required this.card, this.onTap});
 
-  @override
-  State<PokemonCardWidget> createState() => _PokemonCardWidgetState();
-}
-
-class _PokemonCardWidgetState extends State<PokemonCardWidget> {
   static const _emptyCardImage = AssetImage('assets/pokemon_back_monochrome.png');
-
-  late bool _imageLoading;
-  bool _imageFailed = false;
-  String? _listeningImageUrl;
-  ImageStream? _imageStream;
-  ImageStreamListener? _imageListener;
-
-  CatalogPokemonCard get _displayCard => widget.card.catalogCard;
-
-  ScannedPokemonCard? get _scannedCard {
-    final card = widget.card;
-    return card is ScannedPokemonCard ? card : null;
-  }
-
-  String? get _remoteImageUrl {
-    if (_scannedCard != null) return null;
-    final imageUrl = _displayCard.imageUrl;
-    return imageUrl == null || imageUrl.isEmpty ? null : imageUrl;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _imageLoading = _remoteImageUrl != null;
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _listenForImage();
-  }
-
-  @override
-  void didUpdateWidget(PokemonCardWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _listenForImage();
-  }
-
-  @override
-  void dispose() {
-    _removeImageListener();
-    super.dispose();
-  }
-
-  void _removeImageListener() {
-    final listener = _imageListener;
-    if (listener != null) {
-      _imageStream?.removeListener(listener);
-    }
-    _imageStream = null;
-    _imageListener = null;
-  }
-
-  void _listenForImage() {
-    final imageUrl = _remoteImageUrl;
-    if (imageUrl == null) {
-      _removeImageListener();
-      _listeningImageUrl = null;
-      _imageLoading = false;
-      _imageFailed = false;
-      return;
-    }
-
-    if (_listeningImageUrl == imageUrl && _imageListener != null) return;
-
-    _removeImageListener();
-    _listeningImageUrl = imageUrl;
-    _imageLoading = true;
-    _imageFailed = false;
-
-    final stream = CachedNetworkImageProvider(imageUrl).resolve(createLocalImageConfiguration(context));
-    late final ImageStreamListener listener;
-    listener = ImageStreamListener(
-      (image, synchronousCall) {
-        if (!mounted || _listeningImageUrl != imageUrl) return;
-        _finishImageLoad(failed: false, synchronousCall: synchronousCall);
-        stream.removeListener(listener);
-      },
-      onError: (error, stackTrace) {
-        if (!mounted || _listeningImageUrl != imageUrl) return;
-        _finishImageLoad(failed: true, synchronousCall: false);
-        stream.removeListener(listener);
-      },
-    );
-    _imageStream = stream;
-    _imageListener = listener;
-    stream.addListener(listener);
-  }
-
-  void _finishImageLoad({required bool failed, required bool synchronousCall}) {
-    if (synchronousCall) {
-      _imageLoading = false;
-      _imageFailed = failed;
-      return;
-    }
-
-    setState(() {
-      _imageLoading = false;
-      _imageFailed = failed;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final card = widget.card;
     final catalogCard = card.catalogCard;
-    final scannedCard = _scannedCard;
+    final scannedCard = card is ScannedPokemonCard ? card as ScannedPokemonCard : null;
     final estimatedGrade = scannedCard?.estimatedGrading;
     final cardTitle = catalogCard.name;
     final setText = catalogCard.setName;
 
     return Semantics(
-      button: widget.onTap != null,
+      button: onTap != null,
       child: Card(
         clipBehavior: Clip.antiAlias,
         elevation: 0,
@@ -138,7 +31,7 @@ class _PokemonCardWidgetState extends State<PokemonCardWidget> {
           side: BorderSide(color: colorScheme.outlineVariant),
         ),
         child: InkWell(
-          onTap: widget.onTap,
+          onTap: onTap,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -149,10 +42,7 @@ class _PokemonCardWidgetState extends State<PokemonCardWidget> {
                     Container(
                       color: colorScheme.surface,
                       padding: const EdgeInsets.all(8),
-                      child: Opacity(
-                        opacity: 1,
-                        child: _CardImage(card: card.catalogCard, capturedImage: scannedCard?.frontImage, emptyCardImage: _emptyCardImage, loading: _imageLoading, failed: _imageFailed),
-                      ),
+                      child: _CardImage(card: catalogCard, capturedImage: scannedCard?.frontImage, emptyCardImage: _emptyCardImage),
                     ),
                     if (estimatedGrade != null) Positioned(top: 8, right: 8, child: _GradeBadge(grade: estimatedGrade)),
                   ],
@@ -171,53 +61,20 @@ class _CardImage extends StatelessWidget {
   final CatalogPokemonCard card;
   final ImageProvider? capturedImage;
   final ImageProvider emptyCardImage;
-  final bool loading;
-  final bool failed;
 
-  const _CardImage({required this.card, required this.capturedImage, required this.emptyCardImage, required this.loading, required this.failed});
+  const _CardImage({required this.card, required this.capturedImage, required this.emptyCardImage});
 
   @override
   Widget build(BuildContext context) {
     final imageUrl = card.imageUrl;
-    if (capturedImage != null) {
-      return _CapturedCardImage(image: capturedImage!, emptyCardImage: emptyCardImage);
-    }
-    if (imageUrl == null || imageUrl.isEmpty) {
+
+    if (capturedImage == null && (imageUrl == null || imageUrl.isEmpty)) {
       return Image(image: emptyCardImage, fit: BoxFit.contain, excludeFromSemantics: true);
     }
 
-    if (failed) {
-      return Icon(Icons.broken_image_outlined, color: Theme.of(context).colorScheme.onSurfaceVariant);
-    }
-
-    return TweenAnimationBuilder<double>(
-      key: ValueKey(imageUrl),
-      tween: Tween(begin: loading ? 0 : 1, end: loading ? 0 : 1),
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOut,
-      builder: (context, opacity, child) {
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            if (opacity < 1) _CardBackSkeleton(emptyCardImage: emptyCardImage, opacity: 0.5 * (1 - opacity)),
-            if (child != null) Opacity(opacity: opacity, child: child),
-          ],
-        );
-      },
-      child: loading ? null : Image(image: CachedNetworkImageProvider(imageUrl), fit: BoxFit.contain, excludeFromSemantics: true),
-    );
-  }
-}
-
-class _CapturedCardImage extends StatelessWidget {
-  final ImageProvider image;
-  final ImageProvider emptyCardImage;
-
-  const _CapturedCardImage({required this.image, required this.emptyCardImage});
-
-  @override
-  Widget build(BuildContext context) {
+    final image = capturedImage ?? CachedNetworkImageProvider(imageUrl!);
     return Image(
+      key: ValueKey(image),
       image: image,
       fit: BoxFit.contain,
       excludeFromSemantics: true,
@@ -318,6 +175,7 @@ class _GradeBadge extends StatelessWidget {
 
   Color get _gradeColor {
     final normalizedGrade = grade.clamp(1, 10) / 10;
+
     if (normalizedGrade < 0.6) {
       return Color.lerp(const Color(0xFFEF4444), const Color(0xFFF59E0B), normalizedGrade / 0.6)!;
     }
