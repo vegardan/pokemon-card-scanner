@@ -4,6 +4,9 @@ import 'package:pokemon_card_scanner/pages/catalog.dart';
 import 'package:pokemon_card_scanner/pages/scan/scan.dart';
 import 'package:pokemon_card_scanner/repositories/scanned_card_repository.dart';
 import 'package:pokemon_card_scanner/widgets/pokemon_card_grid.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:pokemon_card_scanner/pages/photo_preview.dart';
+import 'package:pokemon_card_scanner/widgets/photo_guide.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -36,6 +39,14 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  Future<void> _pickFromGallery() async {
+    final file = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (file == null || !mounted) return;
+    final bytes = await file.readAsBytes();
+    if (!mounted) return;
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => PhotoPreviewPage(photoBytes: bytes)));
+  }
+
   void _removeCard(ScannedPokemonCard deletedCard) {
     setState(() {
       _cards = _cards.then((cards) {
@@ -52,6 +63,11 @@ class _HomePageState extends State<HomePage> {
         title: const Row(children: [Icon(Icons.catching_pokemon_outlined), SizedBox(width: 6), Text('Pokémon Card Scanner')]),
         actions: [
           IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: 'How to take the photo',
+            onPressed: () => showPhotoGuide(context),
+          ),
+          IconButton(
             icon: const Icon(Icons.list_outlined),
             onPressed: () {
               Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CatalogPage()));
@@ -59,7 +75,17 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(onPressed: _scanCard, icon: const Icon(Icons.document_scanner_outlined), label: const Text('Scan card')),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            FloatingActionButton.extended(heroTag: 'gallery', onPressed: _pickFromGallery, icon: const Icon(Icons.photo_library_outlined), label: const Text('From gallery')),
+            FloatingActionButton.extended(heroTag: 'scan', onPressed: _scanCard, icon: const Icon(Icons.document_scanner_outlined), label: const Text('Scan card')),
+          ],
+        ),
+      ),
       body: FutureBuilder<List<ScannedPokemonCard>>(
         future: _cards,
         builder: (context, snapshot) {
