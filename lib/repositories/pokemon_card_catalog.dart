@@ -9,9 +9,11 @@ class PokemonCardCatalog {
 
   static Future<CatalogPokemonCard?> findById(String id) async {
     final cards = await load();
+
     for (final card in cards) {
       if (card.id == id) return card;
     }
+
     return null;
   }
 
@@ -30,6 +32,7 @@ class PokemonCardCatalog {
 
   static List<CatalogPokemonCard> search(List<CatalogPokemonCard> cards, String query) {
     final normalizedQuery = query.trim().toLowerCase();
+
     if (normalizedQuery.isEmpty) return cards;
 
     return cards
@@ -41,10 +44,13 @@ class PokemonCardCatalog {
 
   static String? _displayImageUrl(String? imageUrl) {
     final trimmedImageUrl = imageUrl?.trim();
+
     if (trimmedImageUrl == null || trimmedImageUrl.isEmpty) return null;
+
     if (trimmedImageUrl.endsWith('_hires.png')) {
       return trimmedImageUrl.replaceFirst('_hires.png', '.png');
     }
+
     return trimmedImageUrl;
   }
 }

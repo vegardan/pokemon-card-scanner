@@ -1,0 +1,1 @@
+enum CardSide { front, back }

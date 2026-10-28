@@ -1,12 +1,12 @@
 """Generate the project's card catalog dataset."""
 
-from pathlib import Path
 import argparse
 import csv
 import http.client
 import json
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 from tempfile import NamedTemporaryFile
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote

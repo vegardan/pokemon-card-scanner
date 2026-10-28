@@ -2,13 +2,12 @@
 
 import argparse
 import csv
+import cv2
 import json
-from pathlib import Path
 import shutil
 import sys
 import uuid
-
-import cv2
+from pathlib import Path
 
 from generate_card_catalog import build_english_pokemon_dataset, write_data_sources
 from generate_orb_references import generate_index, load_catalog

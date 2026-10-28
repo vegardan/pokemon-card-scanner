@@ -4,10 +4,14 @@ import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pokemon_card_scanner/models/card_side.dart';
+import 'package:pokemon_card_scanner/models/jpeg_data.dart';
+import 'package:pokemon_card_scanner/models/pokemon_card.dart';
+import 'package:pokemon_card_scanner/pages/scan/scan_guide.dart';
 import 'package:pokemon_card_scanner/pages/scan/scan_overlay.dart';
+import 'package:pokemon_card_scanner/pages/scan/scan_processing.dart';
+import 'package:pokemon_card_scanner/vision/scan_processor.dart';
 import 'package:sensors_plus/sensors_plus.dart';
-
-typedef CapturedCardImages = ({Uint8List front, Uint8List back});
 
 class ScanPage extends StatefulWidget {
   const ScanPage({super.key});
@@ -18,20 +22,23 @@ class ScanPage extends StatefulWidget {
 
 class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
   CameraController? _camera;
+  CameraDescription? _cameraDescription;
   Future<void> _cameraWork = Future.value();
   StreamSubscription<AccelerometerEvent>? _motion;
   Timer? _sensorTimeout;
 
   bool _active = true;
   bool _capturing = false;
+  bool _processing = false;
   bool _sensorAvailable = false;
   bool _sensorMissing = false;
-  Uint8List? _frontPhotoBytes;
+  JpegData? _frontPhoto;
+  CatalogPokemonCard? _identifiedFront;
   String? _error;
   Offset _gravity = Offset.zero;
   double _z = 0;
 
-  bool get _scanningBack => _frontPhotoBytes != null;
+  CardSide get _scanningSide => _frontPhoto == null ? CardSide.front : CardSide.back;
 
   ScanLevelState get _levelState {
     const levelColor = Color(0xFF69F0AE);
@@ -80,7 +87,7 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
   }
 
   void _updateLevelSensor(AccelerometerEvent event) {
-    if (!mounted || !_active) return;
+    if (!mounted || !_active || _processing) return;
 
     _sensorTimeout?.cancel();
     setState(() {
@@ -96,13 +103,15 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _active = state == AppLifecycleState.resumed;
     _stopMotion();
-    if (_active) _startMotion();
+
+    if (_active && !_processing) _startMotion();
+
     _scheduleCamera();
   }
 
   void _stopMotion() {
     _sensorTimeout?.cancel();
-    unawaited(_motion?.cancel());
+    _motion?.cancel();
     _motion = null;
   }
 
@@ -110,41 +119,81 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
     _cameraWork = _cameraWork.then((_) => _syncCamera());
   }
 
+  CameraDescription? _selectCamera(List<CameraDescription> cameras) {
+    final rear = cameras.where((camera) => camera.lensDirection == CameraLensDirection.back).toList();
+
+    if (rear.isEmpty) return null;
+
+    for (final camera in rear) {
+      if (camera.lensType == CameraLensType.wide) return camera;
+    }
+
+    return rear.first;
+  }
+
+  Future<void> _configureCamera(CameraController controller) async {
+    for (final setting in [() => controller.setFlashMode(FlashMode.off), () => controller.setFocusMode(FocusMode.auto)]) {
+      try {
+        await setting();
+      } on CameraException catch (error) {
+        debugPrint('Optional card camera setting unavailable: $error');
+      }
+    }
+  }
+
   Future<void> _syncCamera() async {
-    if (!mounted || !_active) {
+    if (!mounted || !_active || _processing) {
       await _disposeCamera();
       return;
     }
+
     if (_camera != null) return;
 
     setState(() => _error = null);
     CameraController? controller;
-    try {
-      controller = CameraController(await _rearCamera(), ResolutionPreset.high, enableAudio: false);
-      await controller.initialize();
-      await controller.setFlashMode(FlashMode.off);
 
-      if (!mounted || !_active) {
+    try {
+      if (_cameraDescription == null) {
+        final cameras = await availableCameras();
+
+        if (!mounted || !_active || _processing) return;
+
+        _cameraDescription = _selectCamera(cameras);
+
+        if (!mounted || !_active || _processing) return;
+
+        if (_cameraDescription == null) {
+          setState(() => _error = 'No back camera is available on this device.');
+          return;
+        }
+      }
+
+      controller = CameraController(_cameraDescription!, ResolutionPreset.max, enableAudio: false);
+      await controller.initialize();
+      await controller.lockCaptureOrientation(DeviceOrientation.portraitUp);
+      await _configureCamera(controller);
+
+      if (!mounted || !_active || _processing) {
         await controller.dispose();
         return;
       }
+
       setState(() => _camera = controller);
     } catch (error) {
       await controller?.dispose();
+
       if (!mounted) return;
+
       setState(() => _error = _cameraErrorMessage(error));
     }
-  }
-
-  Future<CameraDescription> _rearCamera() async {
-    final cameras = await availableCameras();
-    return cameras.firstWhere((camera) => camera.lensDirection == CameraLensDirection.back, orElse: () => throw CameraException('NoCamera', 'No rear camera is available.'));
   }
 
   Future<void> _disposeCamera() async {
     final previous = _camera;
     _camera = null;
+
     if (mounted) setState(() {});
+
     await previous?.dispose();
   }
 
@@ -152,30 +201,124 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
     if (error is CameraException && error.code.startsWith('CameraAccess')) {
       return 'Camera access is unavailable. Allow camera access in your phone settings, then try again.';
     }
-    return 'Could not open the rear camera. Please try again.';
+
+    return 'Could not open the camera. Please try again.';
+  }
+
+  Future<void> _showScanError(String message, {required CardSide side}) async {
+    setState(() => _processing = true);
+    _stopMotion();
+    _scheduleCamera();
+    final retry = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => ScanGuidePage(side: side, errorMessage: message),
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (retry != true) Navigator.of(context).pop();
+  }
+
+  Future<void> _openGuide() async {
+    setState(() => _processing = true);
+    _stopMotion();
+    _scheduleCamera();
+
+    try {
+      await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => ScanGuidePage(side: _scanningSide)));
+    } finally {
+      if (mounted) {
+        setState(() => _processing = false);
+
+        if (_active) _startMotion();
+
+        _scheduleCamera();
+      }
+    }
   }
 
   Future<void> _capture() async {
     final camera = _camera;
+
     if (camera == null || _capturing || !_active) return;
 
     setState(() => _capturing = true);
+    final side = _scanningSide;
+
     try {
-      final bytes = await (await camera.takePicture()).readAsBytes();
+      try {
+        await camera.setFocusPoint(const Offset(0.5, 0.5));
+      } on CameraException catch (error) {
+        debugPrint('Capture autofocus unavailable: $error');
+      }
+
+      if (!mounted || !_active || _camera != camera) return;
+
+      final photo = JpegData(await (await camera.takePicture()).readAsBytes());
+
       if (!mounted || !_active) return;
 
-      final front = _frontPhotoBytes;
-      if (front == null) {
-        setState(() => _frontPhotoBytes = bytes);
-      } else {
-        Navigator.of(context).pop((front: front, back: bytes));
+      setState(() => _processing = true);
+      _stopMotion();
+      _scheduleCamera();
+      var stopped = false;
+      final processor = ScanProcessor();
+      final progress = ValueNotifier<ScanProgress>(const ScanProgress(stage: ScanStage.loadReferences, fraction: 0));
+      final cropped = await Navigator.of(context).push<ScanResult>(
+        MaterialPageRoute(
+          builder: (_) => ScanProcessingPage(
+            side: side,
+            progress: progress,
+            process: () async {
+              try {
+                await _cameraWork;
+                return await processor.process(photo, side: side, onProgress: (value) => progress.value = value);
+              } finally {
+                progress.dispose();
+              }
+            },
+            onStop: () {
+              stopped = true;
+              processor.cancel();
+            },
+          ),
+        ),
+      );
+
+      if (!mounted || stopped) return;
+
+      if (cropped == null) {
+        await _showScanError(side == CardSide.back ? 'Could not verify the card back. Please retake the photo.' : 'Could not identify the card front. Please retake the photo.', side: side);
+        return;
       }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not take the photo. Please try again.')));
+
+      if (side == CardSide.front) {
+        setState(() {
+          _frontPhoto = cropped.image;
+          _identifiedFront = cropped.catalogCard;
+        });
+      } else {
+        Navigator.of(context).pop((front: _frontPhoto!, back: cropped.image, catalogCard: _identifiedFront!));
+      }
+    } catch (error, stackTrace) {
+      debugPrint('Card capture failed: $error\n$stackTrace');
+
+      if (mounted && _active) {
+        await _showScanError('Could not take the photo. Please try again.', side: side);
       }
     } finally {
-      if (mounted) setState(() => _capturing = false);
+      if (mounted) {
+        if (_processing && _active && ModalRoute.of(context)?.isCurrent == true) {
+          _startMotion();
+          _scheduleCamera();
+        }
+
+        setState(() {
+          _capturing = false;
+          _processing = false;
+        });
+      }
     }
   }
 
@@ -195,16 +338,13 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_scanningBack ? 'Scan card back' : 'Scan card front'),
-        actions: [if (_scanningBack) IconButton(onPressed: _capturing ? null : () => setState(() => _frontPhotoBytes = null), icon: const Icon(Icons.replay))],
-      ),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (camera != null) CameraPreviewCover(camera: camera),
-          ScanOverlay(camera: camera, capturing: _capturing, error: _error, gravity: _gravity, levelState: levelState, scanningBack: _scanningBack, onCapture: _capture, onRetry: _scheduleCamera),
+        title: Text(_scanningSide == CardSide.back ? 'Scan card back' : 'Scan card front'),
+        actions: [
+          IconButton(tooltip: 'Open scan guide', onPressed: _capturing || _processing ? null : _openGuide, icon: const Icon(Icons.help_outline)),
+          if (_scanningSide == CardSide.back) IconButton(onPressed: _capturing ? null : () => setState(() => _frontPhoto = null), icon: const Icon(Icons.replay)),
         ],
       ),
+      body: ScanOverlay(camera: camera, capturing: _capturing, error: _error, gravity: _gravity, levelState: levelState, side: _scanningSide, onCapture: _capture, onRetry: _scheduleCamera),
     );
   }
 }

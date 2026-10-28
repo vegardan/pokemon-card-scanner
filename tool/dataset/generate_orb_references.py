@@ -8,14 +8,13 @@ import argparse
 import base64
 import concurrent.futures
 import csv
+import cv2
 import json
-from pathlib import Path
+import numpy as np
 import sys
 import time
 import urllib.request
-
-import cv2
-import numpy as np
+from pathlib import Path
 
 from pack_orb_references import pack_references
 

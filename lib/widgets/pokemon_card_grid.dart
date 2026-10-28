@@ -23,6 +23,7 @@ class PokemonCardGrid extends StatelessWidget {
           card: card,
           onTap: () async {
             final deleted = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => CardDetailsPage(card)));
+
             if (deleted == true && card is ScannedPokemonCard) {
               onCardDeleted?.call(card);
             }

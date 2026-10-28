@@ -36,10 +36,13 @@ class _DatasetSourcesPageState extends State<DatasetSourcesPage> {
                 if (snapshot.hasError) {
                   return const Center(child: Text('Could not load dataset sources.'));
                 }
+
                 final citations = snapshot.data;
+
                 if (citations == null) {
                   return const Center(child: CircularProgressIndicator());
                 }
+
                 return ListView(
                   padding: const EdgeInsets.all(16),
                   children: [

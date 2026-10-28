@@ -98,6 +98,7 @@ class _CarouselImage extends StatelessWidget {
             semanticLabel: item.semanticLabel,
             loadingBuilder: (_, child, progress) {
               if (progress == null) return child;
+
               return ImageCarouselSkeleton(height: height);
             },
             errorBuilder: (_, _, _) {
