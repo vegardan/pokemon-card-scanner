@@ -1,10 +1,16 @@
 import 'package:opencv_dart/opencv_dart.dart' as cv;
+import 'dart:math';
 
 const shrinkWidth = 800; //less pixels is faster to work with
 const blurKernelSize = 15; //chosen from testing 5/9/15/21, fewer holes while keeping some edge sharpness
-const double fixedCutOffThreshold = 25; //chosen after testing 25/35/45 in different lightings
 const backgroundStripWidth = 20;
 const cleanKernelSize = 23; //chosen from testing 11-23
+const cornerToleranceFraction = 0.02;
+const cardWidthMm = 63; //standard Pokémon card size: 63x88 mm
+const cardHeightMm = 88;
+const pixelsPerMm = 20; //straightened card = 1260x1760 px
+const marginMm = 3;
+const backgroundTolerance = 10.0; //how far outside the strip range (per channel) still gets counted as background
 
 cv.Mat resize(cv.Mat image, int width) {
   final height = (image.rows * (width/image.cols)).round();
@@ -26,51 +32,39 @@ cv.Mat prepForLabCardFinding(cv.Mat image) {
   return labColorImage;
 }
 
-/// The background color = the average Lab color of a thin strip
-/// around the photo's edge (assuming the card lies in the middle of a plain background not touching edges)
-cv.Scalar backgroundColor(cv.Mat labImage, int stripWidth) {
-  //averge color of each rectangle strip around photo edge
-  final top = cv.mean(labImage.region(cv.Rect(0, 0, labImage.cols, stripWidth)));
-  final bottom = cv.mean(labImage.region(cv.Rect(0, labImage.rows - stripWidth, labImage.cols, stripWidth)));
-  final left = cv.mean(labImage.region(cv.Rect(0, 0, stripWidth, labImage.rows)));
-  final right = cv.mean(labImage.region(cv.Rect(labImage.cols - stripWidth, 0, stripWidth, labImage.rows)));
-
-  //val1, val2, val3 = L, a, b channels. Average the four strips per channel
-  final l = (top.val1 + bottom.val1 + left.val1 + right.val1)/4;
-  final a = (top.val2 + bottom.val2 + left.val2 + right.val2)/4;
-  final b = (top.val3 + bottom.val3 + left.val3 + right.val3)/4;
-  return cv.Scalar(l, a, b);
+//background as a range: lowest to highest strip average per channel (including a tolerance)
+(cv.Scalar, cv.Scalar) backgroundRange(cv.Mat labImage, int stripWidth) {
+  final strips = [
+    cv.mean(labImage.region(cv.Rect(0, 0, labImage.cols, stripWidth))), //top
+    cv.mean(labImage.region(cv.Rect(0, labImage.rows - stripWidth, labImage.cols, stripWidth))), //bottom
+    cv.mean(labImage.region(cv.Rect(0, 0, stripWidth, labImage.rows))), //left
+    cv.mean(labImage.region(cv.Rect(labImage.cols - stripWidth, 0, stripWidth, labImage.rows))), //right
+  ];
+  final l = strips.map((s) => s.val1);
+  final a = strips.map((s) => s.val2);
+  final b = strips.map((s) => s.val3);
+  const tolerance = backgroundTolerance;
+  return (
+  cv.Scalar(l.reduce(min) - tolerance, a.reduce(min) - tolerance, b.reduce(min) - tolerance), //lowest
+  cv.Scalar(l.reduce(max) + tolerance, a.reduce(max) + tolerance, b.reduce(max) + tolerance), //highest
+  );
 }
 
-/// How different each pixel is from the background color
-/// Bright = different from the background (the card), dark = background
-cv.Mat differenceFromBackground(cv.Mat labImage, cv.Scalar backgroundLab) {
-  //an image the same size as lab filled with the background color
-  final backgroundImage = cv.Mat.fromScalar(labImage.rows, labImage.cols, labImage.type, backgroundLab);
-  //per pixel and per channel: how far from the background
-  final channelDifferences = cv.absDiff(labImage, backgroundImage);
-  //split into L, a, b differences and add them into one gray image. values capped at 255
-  final channels = cv.split(channelDifferences);
-  final totalDifferences = cv.add(cv.add(channels[0], channels[1]), channels[2]);
-
-  backgroundImage.dispose();
-  channelDifferences.dispose();
-  return totalDifferences;
+//card mask: everything that is not inside the background range
+cv.Mat cardMaskFromRange(cv.Mat labImage, cv.Scalar low, cv.Scalar high) {
+  final backgroundMask = cv.inRangebyScalar(labImage, low, high); //white = inside the range = background
+  final cardMask = cv.bitwiseNOT(backgroundMask); //flip so card = white
+  backgroundMask.dispose();
+  return cardMask;
 }
 
-/// Mask = every pixel that differs from the background by more than the cutoff
-cv.Mat seperateByFixedThreshold(cv.Mat differenceImage, double cutoff) {
-  final (_, mask) = cv.threshold(differenceImage, cutoff, 255, cv.THRESH_BINARY);
-  return mask;
-}
-
-/// Cleans the mask: opening removes small specks, closing fills small holes
+//cleans the mask: opening removes small specks, closing fills small holes
 cv.Mat cleanMask(cv.Mat mask, int kernelSize) {
   //structuring element: a square of kernelSize x kernelSize pixels
   final cleaningKernel = cv.getStructuringElement(cv.MORPH_RECT, (kernelSize, kernelSize));
-  //opening = erode then dilate (removes white specks smaller than the cleaning kernel)
+  //opening = shrink then grow (removes white specks smaller than the cleaning kernel)
   final opened = cv.morphologyEx(mask, cv.MORPH_OPEN, cleaningKernel);
-  //closing = dilate then erode (fills black holes smaller than the cleaning kernel)
+  //closing = grow then shrink (fills black holes smaller than the cleaning kernel)
   final cleaned = cv.morphologyEx(opened, cv.MORPH_CLOSE, cleaningKernel);
 
   cleaningKernel.dispose();
@@ -78,13 +72,13 @@ cv.Mat cleanMask(cv.Mat mask, int kernelSize) {
   return cleaned;
 }
 
-/// Finds the outline (contour) of the biggest white shape in the mask, which should be the card
-/// Returns all outlines and the index of the biggest one (-1 if no shapes are found)
+//finds the outline (contour) of the biggest white shape in the mask, which should be the card
+//returns all outlines and the index of the biggest one (-1 if no shapes are found)
 (cv.Contours, int) findBiggestContour(cv.Mat cleanedMask) {
   //trace the outer outline of every white shape (holes inside the card are ignored)
   final (contours, hierarchy) = cv.findContours(cleanedMask, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
   hierarchy.dispose();
-  //go through every outline and remember the biggest one
+  //go through every outline to find biggest one
   var biggestIndex = -1;
   var biggestArea = 0.0;
   for (var i = 0; i < contours.length; i++) {
@@ -95,4 +89,58 @@ cv.Mat cleanMask(cv.Mat mask, int kernelSize) {
     }
   }
   return (contours, biggestIndex);
+}
+
+//simplifies the card outline into a polygon with as few points as possible
+//for a card this should give 4 points (the corners)
+cv.VecPoint approximateCorners(cv.VecPoint cardContour, double toleranceFraction) {
+  //total length of the outline so the tolerance scales with the cards size in the photo
+  final outlineLength = cv.arcLength(cardContour, true);
+  //points sticking out less than this from a straight line get removed
+  final tolerance = outlineLength * toleranceFraction;
+  return cv.approxPolyDP(cardContour, tolerance, true);
+}
+
+//sorts 4 corners into: top left, top right, bottom right and bottom left
+List<cv.Point> sortCorners(cv.VecPoint corners) {
+  var topLeft = corners[0];
+  var topRight = corners[0];
+  var bottomRight = corners[0];
+  var bottomLeft = corners[0];
+
+  for (var i = 0; i < corners.length; i++) {
+    final p = corners[i];
+    if (p.x + p.y < topLeft.x + topLeft.y) topLeft = p;
+    if (p.x + p.y > bottomRight.x + bottomRight.y) bottomRight = p;
+    if (p.y - p.x < topRight.y - topRight.x) topRight = p;
+    if (p.y - p.x > bottomLeft.y - bottomLeft.x) bottomLeft = p;
+  }
+  return [topLeft, topRight, bottomRight, bottomLeft];
+}
+
+//scales corner points found on the shrunken image back up to the full size photo
+List<cv.Point> scaleCornersUp(List<cv.Point> corners, double scale) {
+  return corners.map((p) => cv.Point((p.x * scale).round(), (p.y * scale).round())).toList();
+}
+
+//straightens card so the centering measurement wont be done on an unleveled card image
+cv.Mat straightenCard(cv.Mat image, List<cv.Point> corners) {
+  const margin = marginMm * pixelsPerMm;
+  const width = cardWidthMm * pixelsPerMm + 2 * margin;
+  const height = cardHeightMm * pixelsPerMm + 2 * margin;
+  final cornersPhoto = cv.VecPoint.fromList(corners);
+  //margin added so background stays visible around the card and no part of the bordre is cut
+  final cornersStraightImage = cv.VecPoint.fromList([
+    cv.Point(margin, margin), //top left
+    cv.Point(width - 1 - margin, margin), //top right
+    cv.Point(width - 1 - margin, height - 1 - margin), //botom right
+    cv.Point(margin, height - 1 - margin), //bottom left
+  ]);
+  final transform = cv.getPerspectiveTransform(cornersPhoto, cornersStraightImage);
+  final straightCard = cv.warpPerspective(image, transform, (width, height));
+
+  cornersPhoto.dispose();
+  cornersStraightImage.dispose();
+  transform.dispose();
+  return straightCard;
 }

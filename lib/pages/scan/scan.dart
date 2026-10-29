@@ -11,6 +11,8 @@ import 'package:pokemon_card_scanner/pages/scan/scan_guide.dart';
 import 'package:pokemon_card_scanner/pages/scan/scan_overlay.dart';
 import 'package:pokemon_card_scanner/pages/scan/scan_processing.dart';
 import 'package:pokemon_card_scanner/vision/scan_processor.dart';
+import 'package:pokemon_card_scanner/centering/centering_check.dart';
+import 'package:pokemon_card_scanner/pages/centering_result.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
 class ScanPage extends StatefulWidget {
@@ -34,6 +36,7 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
   bool _sensorMissing = false;
   JpegData? _frontPhoto;
   CatalogPokemonCard? _identifiedFront;
+  CenteringResult? _frontCentering;
   String? _error;
   Offset _gravity = Offset.zero;
   double _z = 0;
@@ -297,8 +300,11 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
         setState(() {
           _frontPhoto = cropped.image;
           _identifiedFront = cropped.catalogCard;
+          _frontCentering = cropped.centering;
         });
       } else {
+        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => CenteringResultPage(front: _frontCentering, back: cropped.centering)));
+        if (!mounted) return;
         Navigator.of(context).pop((front: _frontPhoto!, back: cropped.image, catalogCard: _identifiedFront!));
       }
     } catch (error, stackTrace) {

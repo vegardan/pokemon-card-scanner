@@ -23,7 +23,6 @@ dependencies:
   opencv_dart: ^2.2.2
   carousel_slider: ^5.1.2
   photo_view: ^0.15.0
-  image_picker: ^1.2.4
   cancellation_token: ^2.0.1
 
 dev_dependencies:

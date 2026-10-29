@@ -7,10 +7,6 @@ import 'package:pokemon_card_scanner/pages/scan/scan_guide.dart';
 import 'package:pokemon_card_scanner/repositories/app_preferences.dart';
 import 'package:pokemon_card_scanner/repositories/scanned_card_repository.dart';
 import 'package:pokemon_card_scanner/widgets/pokemon_card_grid.dart';
-import 'package:pokemon_card_scanner/repositories/pokemon_card_catalog.dart';
-import 'package:pokemon_card_scanner/pages/centering_test.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:pokemon_card_scanner/widgets/photo_guide.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -44,6 +40,7 @@ class _HomePageState extends State<HomePage> {
     if (!mounted || photos == null) return;
 
     final scannedCard = await ScannedCardRepository.instance.save(photos.front, photos.back, photos.catalogCard);
+
     if (!mounted) return;
 
     setState(() {
@@ -52,14 +49,6 @@ class _HomePageState extends State<HomePage> {
         return cards;
       });
     });
-  }
-
-  Future<void> _pickFromGallery() async {
-    final file = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (file == null || !mounted) return;
-    final bytes = await file.readAsBytes();
-    if (!mounted) return;
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => CenteringTestPage(initialPhotoBytes: bytes)));
   }
 
   void _removeCard(ScannedPokemonCard deletedCard) {
@@ -78,11 +67,6 @@ class _HomePageState extends State<HomePage> {
         title: const Row(children: [Icon(Icons.catching_pokemon_outlined), SizedBox(width: 6), Text('Pokémon Card Scanner')]),
         actions: [
           IconButton(
-            icon: const Icon(Icons.help_outline),
-            tooltip: 'How to take the photo',
-            onPressed: () => showPhotoGuide(context),
-          ),
-          IconButton(
             icon: const Icon(Icons.list_outlined),
             onPressed: () {
               Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CatalogPage()));
@@ -90,17 +74,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            FloatingActionButton.extended(heroTag: 'gallery', onPressed: _pickFromGallery, icon: const Icon(Icons.photo_library_outlined), label: const Text('From gallery'),),
-            FloatingActionButton.extended(heroTag: 'scan', onPressed: _scanCard, icon: const Icon(Icons.document_scanner_outlined), label: const Text('Scan card'),),
-          ],
-        ),
-      ),
+      floatingActionButton: FloatingActionButton.extended(onPressed: _scanCard, icon: const Icon(Icons.document_scanner_outlined), label: const Text('Scan card')),
       body: FutureBuilder<List<ScannedPokemonCard>>(
         future: _cards,
         builder: (context, snapshot) {
