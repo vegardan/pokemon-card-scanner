@@ -15,16 +15,16 @@ const skipPastEdgePixels = 6; //edge itself is blurry/not clean color so it is s
 const borderSampleLengthPixels = 10; //0.5 mm of border is averaged to get border color
 
 
-//a straight line along one edge: edge position = tilt * position along the side + edgeAtStart (y = ax + b)
+/// a straight line along one edge: edge position = tilt * position along the side + edgeAtStart (y = ax + b)
 class EdgeLine {
   final double tilt; //how much the edge moves per pixel along the side (0 = perfectly straight)
   final double edgeAtStart; //where the edge is at position 0
   const EdgeLine(this.tilt, this.edgeAtStart);
-  //where the edge is at a given position along the side
+  /// where the edge is at a given position along the side
   double edgeAt(double position) => tilt * position + edgeAtStart;
 }
 
-//one side of the card: border width in mm + the outer and inner edge lines for drawing
+/// one side of the card: border width in mm + the outer and inner edge lines for drawing
 class SideEdges {
   final double widthMm;
   final EdgeLine outer;
@@ -32,17 +32,17 @@ class SideEdges {
   const SideEdges(this.widthMm, this.outer, this.inner);
 }
 
-//the result for all four sides
+/// the result for all four sides
 class BorderMeasurement {
   final SideEdges left, right, top, bottom;
   const BorderMeasurement(this.left, this.right, this.top, this.bottom);
 }
 
-//how different one pixel is from a color: the differences in l, a and b added together
+/// how different one pixel is from a color: the differences in l, a and b added together
 double _difference(Uint8List pixels, int pixelStart, List<double> color) =>
     (pixels[pixelStart] - color[0]).abs() + (pixels[pixelStart + 1] - color[1]).abs() + (pixels[pixelStart + 2] - color[2]).abs();
 
-//find average color of the pixels (lab) from one point to another along a line
+/// find average color of the pixels (lab) from one point to another along a line
 List<double> _averageColor(Uint8List pixels, List<int> line, int from, int to) {
   var l = 0.0, a = 0.0, b = 0.0;
   for (var i = from; i < to; i++) {
@@ -54,7 +54,7 @@ List<double> _averageColor(Uint8List pixels, List<int> line, int from, int to) {
   return [l / n, a / n, b / n];
 }
 
-//finds where the color first stops being like the given color and stays different for changeMustLastPixels in a row
+/// finds where the color first stops being like the given color and stays different for changeMustLastPixels in a row
 int? _firstLastingChange(Uint8List pixels, List<int> line, int start, List<double> color, double threshold) {
   var pixelsInARow = 0;
   for (var i = start; i < line.length; i++) {
@@ -68,7 +68,7 @@ int? _firstLastingChange(Uint8List pixels, List<int> line, int start, List<doubl
   return null;
 }
 
-//opposite of _firstLastingChange: finds where the color first becomes like the given color, and stays that way for changeMustLastPixels in a row
+/// opposite of _firstLastingChange: finds where the color first becomes like the given color, and stays that way for changeMustLastPixels in a row
 int? _firstLastingMatch(Uint8List pixels, List<int> line, int start, List<double> color, double threshold) {
   var pixelsInARow = 0;
   for (var i = start; i < line.length; i++) {
@@ -82,7 +82,7 @@ int? _firstLastingMatch(Uint8List pixels, List<int> line, int start, List<double
   return null;
 }
 
-//finds the border color on one line (null if no card edge is found)
+/// finds the border color on one line (null if no card edge is found)
 List<double>? _borderColorOnLine(Uint8List pixels, List<int> line) {
   final background = _averageColor(pixels, line, 0, backgroundSamplePixels);
   final outerEdge = _firstLastingChange(pixels, line, backgroundSamplePixels, background, outerEdgeThreshold);
@@ -91,8 +91,8 @@ List<double>? _borderColorOnLine(Uint8List pixels, List<int> line) {
   return _averageColor(pixels, line, outerEdge + skipPastEdgePixels, outerEdge + skipPastEdgePixels + borderSampleLengthPixels);
 }
 
-//finds the outer and inner border edge on one line
-//outer edge is where the card border color starts so something like a shadow in between is skipped
+/// finds the outer and inner border edge on one line
+/// outer edge is where the card border color starts so something like a shadow in between is skipped
 (int, int)? _edgesOnLine(Uint8List pixels, List<int> line, List<double> cardBorderColor) {
   final maxBorder = (maxBorderMm * pixelsPerMm).round();
   final maxSkip = (maxShadowMm * pixelsPerMm).round();
@@ -112,14 +112,14 @@ List<double>? _borderColorOnLine(Uint8List pixels, List<int> line) {
   return (outerEdge, innerEdge);
 }
 
-//median of list, so a few wrong values dont affect it
+/// median of list, so a few wrong values dont affect it
 double _median(List<double> values) {
   final sorted = List<double>.from(values);
   sorted.sort();
   return sorted[sorted.length ~/ 2];
 }
 
-//list of pixel positions along one line, starting at (startX, startY) and moving one step in the given direction each time
+/// list of pixel positions along one line, starting at (startX, startY) and moving one step in the given direction each time
 List<int> _lineInward(int startX, int startY, int stepX, int stepY, int length, int imageWidth) {
   final line = <int>[];
   for (var i = 0; i < length; i++) {
@@ -130,7 +130,7 @@ List<int> _lineInward(int startX, int startY, int stepX, int stepY, int length, 
   return line;
 }
 
-//finds the outer and inner border edge on all four sides of the straightened card
+/// finds the outer and inner border edge on all four sides of the straightened card
 BorderMeasurement? measureBorders(cv.Mat straightCard) {
   final smoothCard = blur(straightCard, 5); //light blur for noise, full size image is sharp
   final labCard = cv.cvtColor(smoothCard, cv.COLOR_BGR2Lab);
@@ -198,7 +198,7 @@ BorderMeasurement? measureBorders(cv.Mat straightCard) {
   );
 }
 
-//turns all lines on one side into one border width (the median) + straight lines to draw
+/// turns all lines on one side into one border width (the median) + straight lines to draw
 SideEdges _measureSide(List<double> positions, List<double> outerEdges, List<double> innerEdges) {
   //border width per line, works even if the card is tilted cause both edges shift equally
   final widthsMm = <double>[];
@@ -221,7 +221,7 @@ SideEdges _measureSide(List<double> positions, List<double> outerEdges, List<dou
   return SideEdges(medianWidth, _fitLine(keptPositions, keptOuter), _fitLine(keptPositions, keptInner));
 }
 
-//best fitting straight line through the points
+/// best fitting straight line through the points
 EdgeLine _fitLine(List<double> positions, List<double> edges) {
   final n = positions.length;
   final averagePosition = positions.reduce((a, b) => a + b) / n;
@@ -238,7 +238,7 @@ EdgeLine _fitLine(List<double> positions, List<double> edges) {
   return EdgeLine(tilt, averageEdge - tilt * averagePosition);
 }
 
-//draws the outer edges green and inner edges red on the straightened card
+/// draws the outer edges green and inner edges red on the straightened card
 void drawBorderLines(cv.Mat card, BorderMeasurement measurement) {
   final width = card.cols;
   final height = card.rows;
@@ -263,14 +263,14 @@ void drawBorderLines(cv.Mat card, BorderMeasurement measurement) {
   }
 }
 
-//the bigger sides share in %, so for example 2 mm and 3 mm is 60 (= 60/40)
+/// the bigger sides share in %, so for example 2 mm and 3 mm is 60 (= 60/40)
 double biggerSide(double a, double b) => max(a, b) / (a + b) * 100;
 
-//PSA centering limits = max share of the bigger side per grade.
+/// PSA centering limits = max share of the bigger side per grade.
 const psaFrontLimits = {10: 55.0, 9: 60.0, 8: 65.0, 7: 70.0, 6: 80.0, 5: 85.0, 3: 90.0}; //exculded 4, 2 and 1 since 4 = 5 and 2,1 = 3
 const psaBackLimits = {10: 75.0, 9: 90.0}; //excluded 8-1 since 8-1 = 9
 
-//Best PSA grade the centering allows (a ceiling, not a grade) or null if worse than all limits
+/// Best PSA grade the centering allows (a ceiling, not a grade) or null if worse than all limits
 int? centeringCeiling(BorderMeasurement measurement, {required bool front}) {
   final worst = max(biggerSide(measurement.left.widthMm, measurement.right.widthMm), biggerSide(measurement.top.widthMm, measurement.bottom.widthMm));
   for (final limit in (front ? psaFrontLimits : psaBackLimits).entries) {
@@ -279,7 +279,7 @@ int? centeringCeiling(BorderMeasurement measurement, {required bool front}) {
   return null;
 }
 
-//combined centering grade for the whole card: the worst of the front and back grade
+/// combined centering grade for the whole card: the worst of the front and back grade
 int? combinedCeiling(int? frontGrade, int? backGrade) {
   if (frontGrade == null || backGrade == null) return null; //one side is worse than all limits
   return min(frontGrade, backGrade);

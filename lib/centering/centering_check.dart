@@ -3,7 +3,7 @@ import 'package:opencv_dart/opencv_dart.dart' as cv;
 import 'package:pokemon_card_scanner/centering/card_finder.dart';
 import 'package:pokemon_card_scanner/centering/centering_measure.dart';
 
-//centering result for one photo (front or back of the card)
+/// centering result for one photo (front or back of the card)
 class CenteringResult {
   final double leftMm, rightMm, topMm, bottomMm; //border widths
   final double leftRight; //bigger side's share in %, for example 56 means 56/44
@@ -14,8 +14,8 @@ class CenteringResult {
   const CenteringResult(this.leftMm, this.rightMm, this.topMm, this.bottomMm, this.leftRight, this.topBottom, this.grade, this.analysisImage);
 }
 
-//finds the card in the photo, straightens it and measures the borders
-//returns null if the card cant be measured reliably (the user should retake with a better background or light)
+/// finds the card in the photo, straightens it and measures the borders
+/// returns null if the card cant be measured reliably (the user should retake with a better background or light)
 CenteringResult? checkCentering(cv.Mat photo, {required bool front}) {
   //find the card on a shrunken copy of the photo
   final labImage = prepForLabCardFinding(photo);

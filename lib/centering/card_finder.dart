@@ -32,7 +32,7 @@ cv.Mat prepForLabCardFinding(cv.Mat image) {
   return labColorImage;
 }
 
-//background as a range: lowest to highest strip average per channel (including a tolerance)
+/// background as a range: lowest to highest strip average per channel (including a tolerance)
 (cv.Scalar, cv.Scalar) backgroundRange(cv.Mat labImage, int stripWidth) {
   final strips = [
     cv.mean(labImage.region(cv.Rect(0, 0, labImage.cols, stripWidth))), //top
@@ -50,7 +50,7 @@ cv.Mat prepForLabCardFinding(cv.Mat image) {
   );
 }
 
-//card mask: everything that is not inside the background range
+/// card mask: everything that is not inside the background range
 cv.Mat cardMaskFromRange(cv.Mat labImage, cv.Scalar low, cv.Scalar high) {
   final backgroundMask = cv.inRangebyScalar(labImage, low, high); //white = inside the range = background
   final cardMask = cv.bitwiseNOT(backgroundMask); //flip so card = white
@@ -58,7 +58,7 @@ cv.Mat cardMaskFromRange(cv.Mat labImage, cv.Scalar low, cv.Scalar high) {
   return cardMask;
 }
 
-//cleans the mask: opening removes small specks, closing fills small holes
+/// cleans the mask: opening removes small specks, closing fills small holes
 cv.Mat cleanMask(cv.Mat mask, int kernelSize) {
   //structuring element: a square of kernelSize x kernelSize pixels
   final cleaningKernel = cv.getStructuringElement(cv.MORPH_RECT, (kernelSize, kernelSize));
@@ -72,8 +72,8 @@ cv.Mat cleanMask(cv.Mat mask, int kernelSize) {
   return cleaned;
 }
 
-//finds the outline (contour) of the biggest white shape in the mask, which should be the card
-//returns all outlines and the index of the biggest one (-1 if no shapes are found)
+/// finds the outline (contour) of the biggest white shape in the mask, which should be the card
+/// returns all outlines and the index of the biggest one (-1 if no shapes are found)
 (cv.Contours, int) findBiggestContour(cv.Mat cleanedMask) {
   //trace the outer outline of every white shape (holes inside the card are ignored)
   final (contours, hierarchy) = cv.findContours(cleanedMask, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
@@ -91,8 +91,8 @@ cv.Mat cleanMask(cv.Mat mask, int kernelSize) {
   return (contours, biggestIndex);
 }
 
-//simplifies the card outline into a polygon with as few points as possible
-//for a card this should give 4 points (the corners)
+/// simplifies the card outline into a polygon with as few points as possible
+/// for a card this should give 4 points (the corners)
 cv.VecPoint approximateCorners(cv.VecPoint cardContour, double toleranceFraction) {
   //total length of the outline so the tolerance scales with the cards size in the photo
   final outlineLength = cv.arcLength(cardContour, true);
@@ -101,7 +101,7 @@ cv.VecPoint approximateCorners(cv.VecPoint cardContour, double toleranceFraction
   return cv.approxPolyDP(cardContour, tolerance, true);
 }
 
-//sorts 4 corners into: top left, top right, bottom right and bottom left
+/// sorts 4 corners into: top left, top right, bottom right and bottom left
 List<cv.Point> sortCorners(cv.VecPoint corners) {
   var topLeft = corners[0];
   var topRight = corners[0];
@@ -118,12 +118,12 @@ List<cv.Point> sortCorners(cv.VecPoint corners) {
   return [topLeft, topRight, bottomRight, bottomLeft];
 }
 
-//scales corner points found on the shrunken image back up to the full size photo
+/// scales corner points found on the shrunken image back up to the full size photo
 List<cv.Point> scaleCornersUp(List<cv.Point> corners, double scale) {
   return corners.map((p) => cv.Point((p.x * scale).round(), (p.y * scale).round())).toList();
 }
 
-//straightens card so the centering measurement wont be done on an unleveled card image
+/// straightens card so the centering measurement wont be done on an unleveled card image
 cv.Mat straightenCard(cv.Mat image, List<cv.Point> corners) {
   const margin = marginMm * pixelsPerMm;
   const width = cardWidthMm * pixelsPerMm + 2 * margin;

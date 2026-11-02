@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pokemon_card_scanner/centering/centering_check.dart';
 import 'package:pokemon_card_scanner/centering/centering_measure.dart';
 
-//simple page showing the centering estimate for the front and back (only based on centering)
+/// simple page showing the centering estimate for the front and back (only based on centering)
 class CenteringResultPage extends StatelessWidget {
   final CenteringResult? front;
   final CenteringResult? back;
