@@ -32,13 +32,23 @@ cv.Mat prepForLabCardFinding(cv.Mat image) {
   return labColorImage;
 }
 
+//average color of one region of the image, disposed after so it doesnt leak memory
+cv.Scalar _averageOfRegion(cv.Mat image, cv.Rect rectangle) {
+  final region = image.region(rectangle);
+  try {
+    return cv.mean(region);
+  } finally {
+    region.dispose();
+  }
+}
+
 //background as a range: lowest to highest strip average per channel (including a tolerance)
 (cv.Scalar, cv.Scalar) backgroundRange(cv.Mat labImage, int stripWidth) {
   final strips = [
-    cv.mean(labImage.region(cv.Rect(0, 0, labImage.cols, stripWidth))), //top
-    cv.mean(labImage.region(cv.Rect(0, labImage.rows - stripWidth, labImage.cols, stripWidth))), //bottom
-    cv.mean(labImage.region(cv.Rect(0, 0, stripWidth, labImage.rows))), //left
-    cv.mean(labImage.region(cv.Rect(labImage.cols - stripWidth, 0, stripWidth, labImage.rows))), //right
+    _averageOfRegion(labImage, cv.Rect(0, 0, labImage.cols, stripWidth)), //top
+    _averageOfRegion(labImage, cv.Rect(0, labImage.rows - stripWidth, labImage.cols, stripWidth)), //bottom
+    _averageOfRegion(labImage, cv.Rect(0, 0, stripWidth, labImage.rows)), //left
+    _averageOfRegion(labImage, cv.Rect(labImage.cols - stripWidth, 0, stripWidth, labImage.rows)), //right
   ];
   final l = strips.map((s) => s.val1);
   final a = strips.map((s) => s.val2);
@@ -137,8 +147,7 @@ cv.Mat straightenCard(cv.Mat image, List<cv.Point> corners) {
     cv.Point(margin, height - 1 - margin), //bottom left
   ]);
   final transform = cv.getPerspectiveTransform(cornersPhoto, cornersStraightImage);
-  final straightCard = cv.warpPerspective(image, transform, (width, height));
-
+  final straightCard = cv.warpPerspective(image, transform, (width, height), borderMode: cv.BORDER_REPLICATE);
   cornersPhoto.dispose();
   cornersStraightImage.dispose();
   transform.dispose();

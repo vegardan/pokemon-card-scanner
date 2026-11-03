@@ -274,7 +274,7 @@ const psaBackLimits = {10: 75.0, 9: 90.0}; //excluded 8-1 since 8-1 = 9
 int? centeringCeiling(BorderMeasurement measurement, {required bool front}) {
   final worst = max(biggerSide(measurement.left.widthMm, measurement.right.widthMm), biggerSide(measurement.top.widthMm, measurement.bottom.widthMm));
   for (final limit in (front ? psaFrontLimits : psaBackLimits).entries) {
-    if (worst < limit.value) return limit.key;
+    if (worst <= limit.value) return limit.key;
   }
   return null;
 }

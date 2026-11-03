@@ -11,9 +11,11 @@ class CenteringResultPage extends StatelessWidget {
 
   String _ratios(CenteringResult? result) {
     if (result == null) return 'Could not be measured';
-    final leftRight = '${result.leftRight.round()}/${(100 - result.leftRight).round()}';
-    final topBottom = '${result.topBottom.round()}/${(100 - result.topBottom).round()}';
-    return 'Left/right $leftRight, top/bottom $topBottom';
+    final left = (result.leftMm / (result.leftMm + result.rightMm) * 100).round();
+    final right = 100 - left;
+    final top = (result.topMm / (result.topMm + result.bottomMm) * 100).round();
+    final bottom = 100 - top;
+    return 'Left/right $left/$right, top/bottom $top/$bottom';
   }
 
   String _verdict() {
