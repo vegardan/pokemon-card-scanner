@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pokemon_card_scanner/centering/centering_check.dart';
 import 'package:pokemon_card_scanner/models/card_side.dart';
 import 'package:pokemon_card_scanner/models/jpeg_data.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
@@ -11,8 +12,6 @@ import 'package:pokemon_card_scanner/pages/scan/scan_guide.dart';
 import 'package:pokemon_card_scanner/pages/scan/scan_overlay.dart';
 import 'package:pokemon_card_scanner/pages/scan/scan_processing.dart';
 import 'package:pokemon_card_scanner/vision/scan_processor.dart';
-import 'package:pokemon_card_scanner/centering/centering_check.dart';
-import 'package:pokemon_card_scanner/pages/centering_result.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
 class ScanPage extends StatefulWidget {
@@ -296,6 +295,11 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
         return;
       }
 
+      if (cropped.centering == null) {
+        await _showScanError('Could not measure ${side == CardSide.front ? 'front' : 'back'} centering. Please retake the photo.', side: side);
+        return;
+      }
+
       if (side == CardSide.front) {
         setState(() {
           _frontPhoto = cropped.image;
@@ -303,9 +307,7 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
           _frontCentering = cropped.centering;
         });
       } else {
-        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => CenteringResultPage(front: _frontCentering, back: cropped.centering)));
-        if (!mounted) return;
-        Navigator.of(context).pop((front: _frontPhoto!, back: cropped.image, catalogCard: _identifiedFront!));
+        Navigator.of(context).pop((front: _frontPhoto!, back: cropped.image, catalogCard: _identifiedFront!, frontCentering: _frontCentering, backCentering: cropped.centering));
       }
     } catch (error, stackTrace) {
       debugPrint('Card capture failed: $error\n$stackTrace');

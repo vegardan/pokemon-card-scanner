@@ -1,5 +1,6 @@
-import 'package:opencv_dart/opencv_dart.dart' as cv;
 import 'dart:math';
+
+import 'package:opencv_dart/opencv_dart.dart' as cv;
 
 const shrinkWidth = 800; //less pixels is faster to work with
 const blurKernelSize = 15; //chosen from testing 5/9/15/21, fewer holes while keeping some edge sharpness
@@ -13,7 +14,7 @@ const marginMm = 3;
 const backgroundTolerance = 10.0; //how far outside the strip range (per channel) still gets counted as background
 
 cv.Mat resize(cv.Mat image, int width) {
-  final height = (image.rows * (width/image.cols)).round();
+  final height = (image.rows * (width / image.cols)).round();
   final resized = cv.resize(image, (width, height), interpolation: cv.INTER_AREA);
   return resized;
 }
@@ -22,6 +23,7 @@ cv.Mat blur(cv.Mat image, int kernelSize) {
   final smoothed = cv.gaussianBlur(image, (kernelSize, kernelSize), 0);
   return smoothed;
 }
+
 cv.Mat prepForLabCardFinding(cv.Mat image) {
   final shrunkenImage = resize(image, shrinkWidth);
   final smoothedImage = blur(shrunkenImage, blurKernelSize);
@@ -45,8 +47,8 @@ cv.Mat prepForLabCardFinding(cv.Mat image) {
   final b = strips.map((s) => s.val3);
   const tolerance = backgroundTolerance;
   return (
-  cv.Scalar(l.reduce(min) - tolerance, a.reduce(min) - tolerance, b.reduce(min) - tolerance), //lowest
-  cv.Scalar(l.reduce(max) + tolerance, a.reduce(max) + tolerance, b.reduce(max) + tolerance), //highest
+    cv.Scalar(l.reduce(min) - tolerance, a.reduce(min) - tolerance, b.reduce(min) - tolerance), //lowest
+    cv.Scalar(l.reduce(max) + tolerance, a.reduce(max) + tolerance, b.reduce(max) + tolerance), //highest
   );
 }
 

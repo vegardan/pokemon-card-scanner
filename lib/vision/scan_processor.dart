@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:cancellation_token/cancellation_token.dart';
 import 'package:flutter/foundation.dart';
 import 'package:opencv_dart/opencv_dart.dart' as cv;
+import 'package:pokemon_card_scanner/centering/centering_check.dart';
 import 'package:pokemon_card_scanner/models/card_side.dart';
 import 'package:pokemon_card_scanner/models/jpeg_data.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
@@ -14,7 +15,6 @@ import 'package:pokemon_card_scanner/repositories/pokemon_card_catalog.dart';
 import 'card_constants.dart';
 import 'card_identifier.dart';
 import 'orb_index.dart';
-import 'package:pokemon_card_scanner/centering/centering_check.dart';
 
 class ScanResult {
   final JpegData image;

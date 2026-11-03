@@ -1,25 +1,45 @@
-import 'package:opencv_dart/opencv_dart.dart' as cv;
 import 'dart:math';
 import 'dart:typed_data';
+
+import 'package:opencv_dart/opencv_dart.dart' as cv;
 import 'package:pokemon_card_scanner/centering/card_finder.dart';
 
-const outerEdgeThreshold = 40.0; //color difference: background to card (outer border edge)
-const innerEdgeThreshold = 30.0; //color difference: border to artwork (inner border egde)
-const maxBorderMm = 8.0; //never search deeper than this into the card (a real border is only a few mms)
-const lineStep = 4; //use every 4th row/column (faster than checking every single pixel row)
-const changeMustLastPixels = 10; //a change must last aprox 0.5 mm, longer than printed text strokes in the border
-const borderMatchThreshold = 60.0; //how close a color must be to the card's border color to count as border
-const maxShadowMm = 2.0; //never skip more than this mms between background and border (want to ignore shadwos)
-const backgroundSamplePixels = 20; //first 1mm of a line is background (inside the margin of 3mm)
-const skipPastEdgePixels = 6; //edge itself is blurry/not clean color so it is skipped
-const borderSampleLengthPixels = 10; //0.5 mm of border is averaged to get border color
+/// color difference: background to card (outer border edge)
+const outerEdgeThreshold = 40.0;
 
+/// color difference: border to artwork (inner border egde)
+const innerEdgeThreshold = 30.0;
+
+/// never search deeper than this into the card (a real border is only a few mms)
+const maxBorderMm = 8.0;
+
+/// use every 4th row/column (faster than checking every single pixel row)
+const lineStep = 4;
+
+/// a change must last aprox 0.5 mm, longer than printed text strokes in the border
+const changeMustLastPixels = 10;
+
+/// how close a color must be to the card's border color to count as border
+const borderMatchThreshold = 60.0;
+
+/// never skip more than this mms between background and border (want to ignore shadwos)
+const maxShadowMm = 2.0;
+
+/// first 1mm of a line is background (inside the margin of 3mm)
+const backgroundSamplePixels = 20;
+
+/// edge itself is blurry/not clean color so it is skipped
+const skipPastEdgePixels = 6;
+
+/// 0.5 mm of border is averaged to get border color
+const borderSampleLengthPixels = 10;
 
 /// a straight line along one edge: edge position = tilt * position along the side + edgeAtStart (y = ax + b)
 class EdgeLine {
   final double tilt; //how much the edge moves per pixel along the side (0 = perfectly straight)
   final double edgeAtStart; //where the edge is at position 0
   const EdgeLine(this.tilt, this.edgeAtStart);
+
   /// where the edge is at a given position along the side
   double edgeAt(double position) => tilt * position + edgeAtStart;
 }
@@ -29,12 +49,14 @@ class SideEdges {
   final double widthMm;
   final EdgeLine outer;
   final EdgeLine inner;
+
   const SideEdges(this.widthMm, this.outer, this.inner);
 }
 
 /// the result for all four sides
 class BorderMeasurement {
   final SideEdges left, right, top, bottom;
+
   const BorderMeasurement(this.left, this.right, this.top, this.bottom);
 }
 
@@ -255,6 +277,7 @@ void drawBorderLines(cv.Mat card, BorderMeasurement measurement) {
         cv.line(card, point(0, height - 1 - line.edgeAt(0)), point(width - 1.0, height - 1 - line.edgeAt(width - 1.0)), color, thickness: 3);
     }
   }
+
   for (final (side, edges) in [('L', measurement.left), ('R', measurement.right), ('T', measurement.top), ('B', measurement.bottom)]) {
     final green = cv.Scalar(0, 255, 0);
     final red = cv.Scalar(0, 0, 255);
@@ -265,22 +288,3 @@ void drawBorderLines(cv.Mat card, BorderMeasurement measurement) {
 
 /// the bigger sides share in %, so for example 2 mm and 3 mm is 60 (= 60/40)
 double biggerSide(double a, double b) => max(a, b) / (a + b) * 100;
-
-/// PSA centering limits = max share of the bigger side per grade.
-const psaFrontLimits = {10: 55.0, 9: 60.0, 8: 65.0, 7: 70.0, 6: 80.0, 5: 85.0, 3: 90.0}; //exculded 4, 2 and 1 since 4 = 5 and 2,1 = 3
-const psaBackLimits = {10: 75.0, 9: 90.0}; //excluded 8-1 since 8-1 = 9
-
-/// Best PSA grade the centering allows (a ceiling, not a grade) or null if worse than all limits
-int? centeringCeiling(BorderMeasurement measurement, {required bool front}) {
-  final worst = max(biggerSide(measurement.left.widthMm, measurement.right.widthMm), biggerSide(measurement.top.widthMm, measurement.bottom.widthMm));
-  for (final limit in (front ? psaFrontLimits : psaBackLimits).entries) {
-    if (worst < limit.value) return limit.key;
-  }
-  return null;
-}
-
-/// combined centering grade for the whole card: the worst of the front and back grade
-int? combinedCeiling(int? frontGrade, int? backGrade) {
-  if (frontGrade == null || backGrade == null) return null; //one side is worse than all limits
-  return min(frontGrade, backGrade);
-}

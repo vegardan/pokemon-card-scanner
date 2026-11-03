@@ -2,8 +2,10 @@ import 'dart:io';
 
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:pokemon_card_scanner/centering/centering_check.dart';
 import 'package:pokemon_card_scanner/models/jpeg_data.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
+import 'package:pokemon_card_scanner/repositories/centering_table.dart';
 import 'package:pokemon_card_scanner/repositories/pokemon_card_catalog.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -28,16 +30,19 @@ class ScannedCardRepository {
             created_at_ms INTEGER NOT NULL
           )
         ''');
+        await CenteringTable.create(db);
       },
     );
   }
 
-  Future<ScannedPokemonCard> save(JpegData frontPhoto, JpegData backPhoto, CatalogPokemonCard catalogCard) async {
+  Future<ScannedPokemonCard> save(JpegData frontPhoto, JpegData backPhoto, CatalogPokemonCard catalogCard, {CenteringResult? frontCentering, CenteringResult? backCentering}) async {
     final db = await _database;
     final createdAt = DateTime.now();
 
     final savedScan = await db.transaction((transaction) async {
       final scanId = await transaction.insert('scanned_cards', {'created_at_ms': createdAt.millisecondsSinceEpoch, 'card_id': catalogCard.id});
+      await CenteringTable.save(transaction, scanId, 'front', frontCentering);
+      await CenteringTable.save(transaction, scanId, 'back', backCentering);
       final frontImagePath = await _writeCapturedImage(scanId, 'front', frontPhoto);
       final backImagePath = await _writeCapturedImage(scanId, 'back', backPhoto);
       await transaction.update('scanned_cards', {'front_image_path': frontImagePath, 'back_image_path': backImagePath}, where: 'scan_id = ?', whereArgs: [scanId]);
@@ -52,12 +57,15 @@ class ScannedCardRepository {
       frontImagePath: savedScan.frontImagePath,
       backImagePath: savedScan.backImagePath,
       createdAt: createdAt,
+      frontCentering: frontCentering,
+      backCentering: backCentering,
     );
   }
 
   Future<List<ScannedPokemonCard>> loadAll() async {
     final db = await _database;
     final rows = await db.query('scanned_cards', orderBy: 'created_at_ms DESC');
+    final centering = await CenteringTable.loadAll(db);
     final cards = <ScannedPokemonCard>[];
 
     for (final row in rows) {
@@ -69,6 +77,8 @@ class ScannedCardRepository {
       cards.add(
         ScannedPokemonCard(
           scanId: row['scan_id']! as int,
+          frontCentering: centering[(row['scan_id'] as int, 'front')],
+          backCentering: centering[(row['scan_id'] as int, 'back')],
           catalogCard: catalogCard,
           estimatedGrading: null,
           frontImagePath: row['front_image_path'] as String,
