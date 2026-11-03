@@ -20,6 +20,7 @@ class ScannedCardRepository {
     return openDatabase(
       join(databasePath, 'pokemon_card_scanner.db'),
       version: 1,
+      onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE scanned_cards (
