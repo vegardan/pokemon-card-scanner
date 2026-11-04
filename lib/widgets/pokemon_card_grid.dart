@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:pokemon_card_scanner/models/grading_profile.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
 import 'package:pokemon_card_scanner/pages/card_details.dart';
 import 'package:pokemon_card_scanner/widgets/pokemon_card_widget.dart';
 
 class PokemonCardGrid extends StatelessWidget {
   final List<PokemonCard> cards;
+  final GradingProfile profile;
   final ValueChanged<ScannedPokemonCard>? onCardDeleted;
 
-  const PokemonCardGrid({super.key, required this.cards, this.onCardDeleted});
+  const PokemonCardGrid({super.key, required this.cards, this.onCardDeleted, this.profile = GradingProfile.psa});
 
   @override
   Widget build(BuildContext context) {
@@ -21,8 +23,11 @@ class PokemonCardGrid extends StatelessWidget {
         return PokemonCardWidget(
           key: ObjectKey(card),
           card: card,
+          profile: profile,
           onTap: () async {
-            final deleted = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => CardDetailsPage(card)));
+            final deleted = await Navigator.of(
+              context,
+            ).push<bool>(MaterialPageRoute(builder: (_) => card is ScannedPokemonCard ? OwnedCardDetailsPage(card) : CatalogCardDetailsPage(card.catalogCard)));
 
             if (deleted == true && card is ScannedPokemonCard) {
               onCardDeleted?.call(card);

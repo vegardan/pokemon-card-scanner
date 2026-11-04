@@ -201,7 +201,7 @@ class _ScanStatus extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('$label side · $step of 2', textAlign: TextAlign.center, style: theme.textTheme.titleMedium),
+        Text('$label side \u00b7 $step of 2', textAlign: TextAlign.center, style: theme.textTheme.titleMedium),
         const SizedBox(height: 4),
         Text(
           levelState.status,

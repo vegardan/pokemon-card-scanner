@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pokemon_card_scanner/centering/centering_check.dart';
 import 'package:pokemon_card_scanner/models/card_side.dart';
 import 'package:pokemon_card_scanner/models/jpeg_data.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
@@ -34,6 +35,7 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
   bool _sensorMissing = false;
   JpegData? _frontPhoto;
   CatalogPokemonCard? _identifiedFront;
+  CenteringResult? _frontCentering;
   String? _error;
   Offset _gravity = Offset.zero;
   double _z = 0;
@@ -293,13 +295,19 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
         return;
       }
 
+      if (cropped.centering == null) {
+        await _showScanError('Could not measure ${side == CardSide.front ? 'front' : 'back'} centering. Please retake the photo.', side: side);
+        return;
+      }
+
       if (side == CardSide.front) {
         setState(() {
           _frontPhoto = cropped.image;
           _identifiedFront = cropped.catalogCard;
+          _frontCentering = cropped.centering;
         });
       } else {
-        Navigator.of(context).pop((front: _frontPhoto!, back: cropped.image, catalogCard: _identifiedFront!));
+        Navigator.of(context).pop((front: _frontPhoto!, back: cropped.image, catalogCard: _identifiedFront!, frontCentering: _frontCentering, backCentering: cropped.centering));
       }
     } catch (error, stackTrace) {
       debugPrint('Card capture failed: $error\n$stackTrace');
