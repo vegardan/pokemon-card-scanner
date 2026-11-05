@@ -30,7 +30,7 @@ class _CreasePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final pen = Paint()
-      ..color = Colors.amber
+      ..color = Colors.red
       ..strokeWidth = 2;
     for (final candidate in result.candidates) {
       final start = Offset(
