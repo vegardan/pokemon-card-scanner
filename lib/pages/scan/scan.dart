@@ -5,6 +5,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:pokemon_card_scanner/centering/centering_check.dart';
 import 'package:pokemon_card_scanner/models/card_side.dart';
 import 'package:pokemon_card_scanner/models/jpeg_data.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
@@ -38,6 +39,8 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
   JpegData? _frontPhoto;
   CatalogPokemonCard? _identifiedFront;
   static Future<Float32List>? _referenceNoise;
+  CenteringResult? _frontCentering;
+
   String? _error;
   Offset _gravity = Offset.zero;
   double _z = 0;
@@ -339,10 +342,19 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
         return;
       }
 
+      if (cropped.centering == null) {
+        await _showScanError(
+          'Could not measure ${side == CardSide.front ? 'front' : 'back'} centering. Please retake the photo.',
+          side: side,
+        );
+        return;
+      }
+
       if (side == CardSide.front) {
         setState(() {
           _frontPhoto = cropped.image;
           _identifiedFront = cropped.catalogCard;
+          _frontCentering = cropped.centering;
         });
       } else {
         final backCreases = await _reviewCreases(cropped.image);
@@ -352,6 +364,8 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
           back: cropped.image,
           catalogCard: _identifiedFront!,
           backCreases: backCreases,
+          frontCentering: _frontCentering,
+          backCentering: cropped.centering,
         ));
       }
     } catch (error, stackTrace) {

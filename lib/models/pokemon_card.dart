@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:pokemon_card_scanner/centering/centering_check.dart';
 
 import 'package:pokemon_card_scanner/models/crease_analysis.dart';
 import 'package:pokemon_card_scanner/models/jpeg_data.dart';
@@ -7,6 +8,8 @@ import 'package:flutter/widgets.dart';
 
 /// Complete front/back scan, including the analysis of this exact back image.
 typedef CompletedCardScan = ({
+  CenteringResult? frontCentering,
+  CenteringResult? backCentering,
   JpegData front,
   JpegData back,
   CatalogPokemonCard catalogCard,
@@ -38,6 +41,8 @@ final class ScannedPokemonCard implements PokemonCard {
   @override
   final CatalogPokemonCard catalogCard;
   final int scanId;
+  final CenteringResult? frontCentering;
+  final CenteringResult? backCentering;
   final int? estimatedGrading;
   final String frontImagePath;
   final String backImagePath;
@@ -47,6 +52,8 @@ final class ScannedPokemonCard implements PokemonCard {
   const ScannedPokemonCard({
     required this.catalogCard,
     required this.scanId,
+    this.frontCentering,
+    this.backCentering,
     required this.estimatedGrading,
     required this.frontImagePath,
     required this.backImagePath,

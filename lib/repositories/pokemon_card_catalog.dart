@@ -30,14 +30,16 @@ class PokemonCardCatalog {
         .toList(growable: false);
   }
 
-  static List<CatalogPokemonCard> search(List<CatalogPokemonCard> cards, String query) {
+  static List<T> search<T extends PokemonCard>(List<T> cards, String query) {
     final normalizedQuery = query.trim().toLowerCase();
 
     if (normalizedQuery.isEmpty) return cards;
 
     return cards
         .where((card) {
-          return card.name.toLowerCase().contains(normalizedQuery) || card.setName.toLowerCase().contains(normalizedQuery) || card.id.toLowerCase().contains(normalizedQuery);
+          return card.catalogCard.name.toLowerCase().contains(normalizedQuery) ||
+              card.catalogCard.setName.toLowerCase().contains(normalizedQuery) ||
+              card.catalogCard.id.toLowerCase().contains(normalizedQuery);
         })
         .toList(growable: false);
   }

@@ -1,12 +1,13 @@
 import 'dart:io';
 import 'dart:convert';
-
 import 'package:pokemon_card_scanner/models/crease_analysis.dart';
 
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:pokemon_card_scanner/centering/centering_check.dart';
 import 'package:pokemon_card_scanner/models/jpeg_data.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
+import 'package:pokemon_card_scanner/repositories/centering_table.dart';
 import 'package:pokemon_card_scanner/repositories/pokemon_card_catalog.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -20,14 +21,9 @@ class ScannedCardRepository {
     final databasePath = await getDatabasesPath();
     return openDatabase(
       join(databasePath, 'pokemon_card_scanner.db'),
-      version: 2,
-      onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 2) {
-          await db.execute(
-            'ALTER TABLE scanned_cards ADD COLUMN back_crease_analysis TEXT',
-          );
-        }
-      },
+      version: 3,
+      onUpgrade: (db, oldVersion, newVersion) => upgradeSchema(db),
+      onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE scanned_cards (
@@ -39,14 +35,31 @@ class ScannedCardRepository {
             back_crease_analysis TEXT
           )
         ''');
+        await CenteringTable.create(db);
       },
     );
+  }
+
+  /// Upgrade both legacy/centering v1 and crease-only v2 without replacing data.
+  static Future<void> upgradeSchema(DatabaseExecutor db) async {
+    final columns = await db.rawQuery('PRAGMA table_info(scanned_cards)');
+    if (!columns.any((column) => column['name'] == 'back_crease_analysis')) {
+      await db.execute(
+        'ALTER TABLE scanned_cards ADD COLUMN back_crease_analysis TEXT',
+      );
+    }
+    final tables = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'card_centering'",
+    );
+    if (tables.isEmpty) await CenteringTable.create(db);
   }
 
   Future<ScannedPokemonCard> save(
     JpegData frontPhoto,
     JpegData backPhoto,
     CatalogPokemonCard catalogCard, {
+    CenteringResult? frontCentering,
+    CenteringResult? backCentering,
     CreaseAnalysis backCreases = CreaseAnalysis.unavailable,
   }) async {
     final db = await _database;
@@ -58,6 +71,8 @@ class ScannedCardRepository {
         'card_id': catalogCard.id,
         'back_crease_analysis': jsonEncode(backCreases.toJson()),
       });
+      await CenteringTable.save(transaction, scanId, 'front', frontCentering);
+      await CenteringTable.save(transaction, scanId, 'back', backCentering);
       final frontImagePath = await _writeCapturedImage(
         scanId,
         'front',
@@ -89,6 +104,8 @@ class ScannedCardRepository {
       frontImagePath: savedScan.frontImagePath,
       backImagePath: savedScan.backImagePath,
       createdAt: createdAt,
+      frontCentering: frontCentering,
+      backCentering: backCentering,
       backCreases: backCreases,
     );
   }
@@ -96,6 +113,7 @@ class ScannedCardRepository {
   Future<List<ScannedPokemonCard>> loadAll() async {
     final db = await _database;
     final rows = await db.query('scanned_cards', orderBy: 'created_at_ms DESC');
+    final centering = await CenteringTable.loadAll(db);
     final cards = <ScannedPokemonCard>[];
 
     for (final row in rows) {
@@ -109,15 +127,17 @@ class ScannedCardRepository {
       cards.add(
         ScannedPokemonCard(
           scanId: row['scan_id']! as int,
+          backCreases: CreaseAnalysis.decode(
+            row['back_crease_analysis'] as String?,
+          ),
+          frontCentering: centering[(row['scan_id'] as int, 'front')],
+          backCentering: centering[(row['scan_id'] as int, 'back')],
           catalogCard: catalogCard,
           estimatedGrading: null,
           frontImagePath: row['front_image_path'] as String,
           backImagePath: row['back_image_path'] as String,
           createdAt: DateTime.fromMillisecondsSinceEpoch(
             row['created_at_ms']! as int,
-          ),
-          backCreases: CreaseAnalysis.decode(
-            row['back_crease_analysis'] as String?,
           ),
         ),
       );
