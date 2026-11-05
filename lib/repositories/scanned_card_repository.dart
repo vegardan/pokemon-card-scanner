@@ -1,4 +1,7 @@
 import 'dart:io';
+import 'dart:convert';
+
+import 'package:pokemon_card_scanner/models/crease_analysis.dart';
 
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -17,7 +20,14 @@ class ScannedCardRepository {
     final databasePath = await getDatabasesPath();
     return openDatabase(
       join(databasePath, 'pokemon_card_scanner.db'),
-      version: 1,
+      version: 2,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute(
+            'ALTER TABLE scanned_cards ADD COLUMN back_crease_analysis TEXT',
+          );
+        }
+      },
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE scanned_cards (
@@ -25,24 +35,51 @@ class ScannedCardRepository {
             card_id TEXT NOT NULL,
             front_image_path TEXT,
             back_image_path TEXT,
-            created_at_ms INTEGER NOT NULL
+            created_at_ms INTEGER NOT NULL,
+            back_crease_analysis TEXT
           )
         ''');
       },
     );
   }
 
-  Future<ScannedPokemonCard> save(JpegData frontPhoto, JpegData backPhoto, CatalogPokemonCard catalogCard) async {
+  Future<ScannedPokemonCard> save(
+    JpegData frontPhoto,
+    JpegData backPhoto,
+    CatalogPokemonCard catalogCard, {
+    CreaseAnalysis backCreases = CreaseAnalysis.unavailable,
+  }) async {
     final db = await _database;
     final createdAt = DateTime.now();
 
     final savedScan = await db.transaction((transaction) async {
-      final scanId = await transaction.insert('scanned_cards', {'created_at_ms': createdAt.millisecondsSinceEpoch, 'card_id': catalogCard.id});
-      final frontImagePath = await _writeCapturedImage(scanId, 'front', frontPhoto);
-      final backImagePath = await _writeCapturedImage(scanId, 'back', backPhoto);
-      await transaction.update('scanned_cards', {'front_image_path': frontImagePath, 'back_image_path': backImagePath}, where: 'scan_id = ?', whereArgs: [scanId]);
+      final scanId = await transaction.insert('scanned_cards', {
+        'created_at_ms': createdAt.millisecondsSinceEpoch,
+        'card_id': catalogCard.id,
+        'back_crease_analysis': jsonEncode(backCreases.toJson()),
+      });
+      final frontImagePath = await _writeCapturedImage(
+        scanId,
+        'front',
+        frontPhoto,
+      );
+      final backImagePath = await _writeCapturedImage(
+        scanId,
+        'back',
+        backPhoto,
+      );
+      await transaction.update(
+        'scanned_cards',
+        {'front_image_path': frontImagePath, 'back_image_path': backImagePath},
+        where: 'scan_id = ?',
+        whereArgs: [scanId],
+      );
 
-      return (scanId: scanId, frontImagePath: frontImagePath, backImagePath: backImagePath);
+      return (
+        scanId: scanId,
+        frontImagePath: frontImagePath,
+        backImagePath: backImagePath,
+      );
     });
 
     return ScannedPokemonCard(
@@ -52,6 +89,7 @@ class ScannedCardRepository {
       frontImagePath: savedScan.frontImagePath,
       backImagePath: savedScan.backImagePath,
       createdAt: createdAt,
+      backCreases: backCreases,
     );
   }
 
@@ -61,7 +99,9 @@ class ScannedCardRepository {
     final cards = <ScannedPokemonCard>[];
 
     for (final row in rows) {
-      final catalogCard = await PokemonCardCatalog.findById(row['card_id'] as String);
+      final catalogCard = await PokemonCardCatalog.findById(
+        row['card_id'] as String,
+      );
 
       // A scan can only be displayed when its card exists in the catalog.
       if (catalogCard == null) continue;
@@ -73,7 +113,12 @@ class ScannedCardRepository {
           estimatedGrading: null,
           frontImagePath: row['front_image_path'] as String,
           backImagePath: row['back_image_path'] as String,
-          createdAt: DateTime.fromMillisecondsSinceEpoch(row['created_at_ms']! as int),
+          createdAt: DateTime.fromMillisecondsSinceEpoch(
+            row['created_at_ms']! as int,
+          ),
+          backCreases: CreaseAnalysis.decode(
+            row['back_crease_analysis'] as String?,
+          ),
         ),
       );
     }
@@ -83,7 +128,11 @@ class ScannedCardRepository {
 
   Future<void> delete(ScannedPokemonCard card) async {
     final db = await _database;
-    await db.delete('scanned_cards', where: 'scan_id = ?', whereArgs: [card.scanId]);
+    await db.delete(
+      'scanned_cards',
+      where: 'scan_id = ?',
+      whereArgs: [card.scanId],
+    );
 
     for (final imagePath in [card.frontImagePath, card.backImagePath]) {
       final imageFile = File(imagePath);
@@ -94,9 +143,15 @@ class ScannedCardRepository {
     }
   }
 
-  Future<String> _writeCapturedImage(int scanId, String side, JpegData image) async {
+  Future<String> _writeCapturedImage(
+    int scanId,
+    String side,
+    JpegData image,
+  ) async {
     final documentsDirectory = await getApplicationDocumentsDirectory();
-    final scansDirectory = Directory(join(documentsDirectory.path, 'scanned_cards'));
+    final scansDirectory = Directory(
+      join(documentsDirectory.path, 'scanned_cards'),
+    );
 
     if (!await scansDirectory.exists()) {
       await scansDirectory.create(recursive: true);

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:pokemon_card_scanner/models/jpeg_data.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
 import 'package:pokemon_card_scanner/pages/catalog.dart';
 import 'package:pokemon_card_scanner/pages/scan/scan.dart';
@@ -30,16 +29,27 @@ class _HomePageState extends State<HomePage> {
     if (!mounted) return;
 
     if (!skipGuide) {
-      final ready = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const ScanGuidePage(showSkipOption: true)));
+      final ready = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => const ScanGuidePage(showSkipOption: true),
+        ),
+      );
 
       if (!mounted || ready != true) return;
     }
 
-    final photos = await Navigator.of(context).push<({JpegData front, JpegData back, CatalogPokemonCard catalogCard})>(MaterialPageRoute(builder: (_) => const ScanPage()));
+    final photos = await Navigator.of(context).push<CompletedCardScan>(
+      MaterialPageRoute(builder: (_) => const ScanPage()),
+    );
 
     if (!mounted || photos == null) return;
 
-    final scannedCard = await ScannedCardRepository.instance.save(photos.front, photos.back, photos.catalogCard);
+    final scannedCard = await ScannedCardRepository.instance.save(
+      photos.front,
+      photos.back,
+      photos.catalogCard,
+      backCreases: photos.backCreases,
+    );
 
     if (!mounted) return;
 
@@ -64,17 +74,29 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Row(children: [Icon(Icons.catching_pokemon_outlined), SizedBox(width: 6), Text('Pokémon Card Scanner')]),
+        title: const Row(
+          children: [
+            Icon(Icons.catching_pokemon_outlined),
+            SizedBox(width: 6),
+            Text('Pokémon Card Scanner'),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.list_outlined),
             onPressed: () {
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CatalogPage()));
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const CatalogPage()));
             },
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(onPressed: _scanCard, icon: const Icon(Icons.document_scanner_outlined), label: const Text('Scan card')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _scanCard,
+        icon: const Icon(Icons.document_scanner_outlined),
+        label: const Text('Scan card'),
+      ),
       body: FutureBuilder<List<ScannedPokemonCard>>(
         future: _cards,
         builder: (context, snapshot) {
