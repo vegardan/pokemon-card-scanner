@@ -1,9 +1,31 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:pokemon_card_scanner/controllers/grading_profile_controller.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
+import 'package:pokemon_card_scanner/pages/grade_overview.dart';
 import 'package:pokemon_card_scanner/repositories/scanned_card_repository.dart';
 import 'package:pokemon_card_scanner/vision/card_constants.dart';
+import 'package:pokemon_card_scanner/widgets/grading/grade_badge.dart';
+import 'package:pokemon_card_scanner/widgets/grading/grading_profile_picker.dart';
 import 'package:pokemon_card_scanner/widgets/image_carousel/image_carousel.dart';
+
+class OwnedCardDetailsPage extends StatelessWidget {
+  final ScannedPokemonCard card;
+
+  const OwnedCardDetailsPage(this.card, {super.key});
+
+  @override
+  Widget build(BuildContext context) => CardDetailsPage(card);
+}
+
+class CatalogCardDetailsPage extends StatelessWidget {
+  final CatalogPokemonCard card;
+
+  const CatalogCardDetailsPage(this.card, {super.key});
+
+  @override
+  Widget build(BuildContext context) => CardDetailsPage(card);
+}
 
 class CardDetailsPage extends StatelessWidget {
   final PokemonCard card;
@@ -16,35 +38,104 @@ class CardDetailsPage extends StatelessWidget {
     final scannedCard = card is ScannedPokemonCard ? card as ScannedPokemonCard : null;
     final title = catalogCard.name;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        actions: [if (scannedCard != null) IconButton(tooltip: 'Delete card', icon: const Icon(Icons.delete_outline), onPressed: () => _deleteCard(context, scannedCard))],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-        children: [
-          Center(child: _CardImageCarousel(card: card)),
-          const SizedBox(height: 24),
-          Text(title, style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 16),
-          _DetailRow(label: 'Set', value: catalogCard.setName),
-          _DetailRow(label: 'Card ID', value: catalogCard.id),
-          if (scannedCard != null) ...[
-            _DetailRow(label: 'Estimated grade', value: scannedCard.estimatedGrading?.toString() ?? 'Not available'),
-            _DetailRow(
-              label: 'Scanned',
-              value: '${MaterialLocalizations.of(context).formatShortDate(scannedCard.createdAt.toLocal())} ${TimeOfDay.fromDateTime(scannedCard.createdAt.toLocal()).format(context)}',
+    return ListenableBuilder(
+      listenable: GradingProfileController.instance,
+      builder: (context, _) {
+        final profile = GradingProfileController.instance.value;
+        final front = scannedCard?.frontCentering;
+        final back = scannedCard?.backCentering;
+        final centeringGrade = front == null || back == null
+            ? null
+            : profile.centeringScore(
+                frontLeftRight: front.leftRight,
+                frontTopBottom: front.topBottom,
+                backLeftRight: back.leftRight,
+                backTopBottom: back.topBottom,
+              );
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(title),
+            actions: [
+              if (scannedCard != null) ...[
+                const Padding(
+                  padding: EdgeInsets.only(right: 4),
+                  child: Center(child: GradingProfileChip()),
+                ),
+                IconButton(
+                  tooltip: 'Delete card',
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () => _deleteCard(context, scannedCard),
+                ),
+              ],
+            ],
+          ),
+          body: ListView(
+            padding: EdgeInsets.fromLTRB(
+              24,
+              16,
+              24,
+              40 + MediaQuery.paddingOf(context).bottom,
             ),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CardDetailsPage(catalogCard))),
-              icon: const Icon(Icons.collections_bookmark_outlined),
-              label: const Text('View in catalog'),
-            ),
-          ],
-        ],
-      ),
+            children: [
+              Center(child: _CardImageCarousel(card: card)),
+              const SizedBox(height: 24),
+              Text(title, style: Theme.of(context).textTheme.headlineSmall),
+              const SizedBox(height: 16),
+              if (scannedCard != null)
+                _DetailRow(
+                  label: 'Estimated grade',
+                  value: Align(
+                    alignment: Alignment.centerLeft,
+                    child: scannedCard.estimatedGrading != null
+                        ? GradeBadge(
+                            grade: scannedCard.estimatedGrading!,
+                            profileName: profile.shortName,
+                          )
+                        : (centeringGrade != null
+                            ? GradeBadge(
+                                grade: centeringGrade,
+                                profileName: profile.shortName,
+                              )
+                            : const Text('Not available')),
+                  ),
+                ),
+              _DetailRow(label: 'Set', value: Text(catalogCard.setName)),
+              _DetailRow(label: 'Card ID', value: Text(catalogCard.id)),
+              if (scannedCard != null) ...[
+                _DetailRow(
+                  label: 'Scanned',
+                  value: Text(
+                    '${MaterialLocalizations.of(context).formatShortDate(scannedCard.createdAt.toLocal())} ${TimeOfDay.fromDateTime(scannedCard.createdAt.toLocal()).format(context)}',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (scannedCard.gradeReport != null || scannedCard.estimatedGrading != null) ...[
+                  FilledButton.tonalIcon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => GradeOverviewPage(card: scannedCard),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.analytics_outlined),
+                    label: const Text('View grade overview'),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => CatalogCardDetailsPage(catalogCard)),
+                  ),
+                  icon: const Icon(Icons.collections_bookmark_outlined),
+                  label: const Text('View in catalog'),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -65,16 +156,12 @@ class CardDetailsPage extends StatelessWidget {
       ),
     );
 
-    if (confirmed != true || !context.mounted) return;
-
-    try {
+    if (confirmed == true && context.mounted) {
       await ScannedCardRepository.instance.delete(card);
 
-      if (context.mounted) Navigator.pop(context, true);
-    } catch (_) {
-      if (!context.mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not delete the card. Please try again.')));
+      if (context.mounted) {
+        Navigator.pop(context, true);
+      }
     }
   }
 }
@@ -86,25 +173,34 @@ class _CardImageCarousel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = card.catalogCard.imageUrl;
     final scannedCard = card is ScannedPokemonCard ? card as ScannedPokemonCard : null;
-    final items = <ImageCarouselItem>[
-      if (scannedCard != null) ...[ImageCarouselItem(imageProvider: scannedCard.frontImage, semanticLabel: 'Front'), ImageCarouselItem(imageProvider: scannedCard.backImage, semanticLabel: 'Back')],
-    ];
+    final catalogCard = card.catalogCard;
 
-    if (items.isEmpty) {
+    final items = <ImageCarouselItem>[];
+
+    if (scannedCard != null) {
+      items.add(ImageCarouselItem(imageProvider: scannedCard.frontImage, semanticLabel: 'Front photo of ${catalogCard.name}'));
+      items.add(ImageCarouselItem(imageProvider: scannedCard.backImage, semanticLabel: 'Back photo of ${catalogCard.name}'));
+    }
+
+    if (catalogCard.imageUrl != null) {
       items.add(
         ImageCarouselItem(
-          imageProvider: imageUrl != null && imageUrl.isNotEmpty ? CachedNetworkImageProvider(imageUrl) : const AssetImage('assets/pokemon_back_monochrome.png'),
-          semanticLabel: card.catalogCard.name,
+          imageProvider: CachedNetworkImageProvider(catalogCard.imageUrl!),
+          semanticLabel: 'Catalog image of ${catalogCard.name}',
         ),
       );
     }
 
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 360),
+      constraints: const BoxConstraints(maxWidth: 300),
       child: LayoutBuilder(
-        builder: (context, constraints) => ImageCarousel(items: items, height: constraints.maxWidth / CardConstants.cardAspectRatio, fit: BoxFit.contain, showLabels: scannedCard != null),
+        builder: (context, constraints) => ImageCarousel(
+          items: items,
+          height: constraints.maxWidth / CardConstants.cardAspectRatio,
+          fit: BoxFit.contain,
+          showLabels: true,
+        ),
       ),
     );
   }
@@ -112,7 +208,7 @@ class _CardImageCarousel extends StatelessWidget {
 
 class _DetailRow extends StatelessWidget {
   final String label;
-  final String value;
+  final Widget value;
 
   const _DetailRow({required this.label, required this.value});
 
@@ -121,10 +217,10 @@ class _DetailRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(width: 120, child: Text(label, style: Theme.of(context).textTheme.labelLarge)),
-          Expanded(child: Text(value)),
+          Expanded(child: value),
         ],
       ),
     );

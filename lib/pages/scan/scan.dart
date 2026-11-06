@@ -2,14 +2,19 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pokemon_card_scanner/centering/centering_check.dart';
 import 'package:pokemon_card_scanner/models/card_side.dart';
 import 'package:pokemon_card_scanner/models/jpeg_data.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
 import 'package:pokemon_card_scanner/pages/scan/scan_guide.dart';
 import 'package:pokemon_card_scanner/pages/scan/scan_overlay.dart';
 import 'package:pokemon_card_scanner/pages/scan/scan_processing.dart';
+import 'package:pokemon_card_scanner/pages/scan/scan_quality_error_page.dart';
+import 'package:pokemon_card_scanner/vision/crease_analyzer.dart';
+import 'package:pokemon_card_scanner/vision/quality/image_quality_checker.dart';
 import 'package:pokemon_card_scanner/vision/scan_processor.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
@@ -34,6 +39,8 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
   bool _sensorMissing = false;
   JpegData? _frontPhoto;
   CatalogPokemonCard? _identifiedFront;
+  CenteringResult? _frontCentering;
+  static Future<Float32List>? _referenceNoise;
   String? _error;
   Offset _gravity = Offset.zero;
   double _z = 0;
@@ -243,6 +250,7 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
 
     if (camera == null || _capturing || !_active) return;
 
+    final navigator = Navigator.of(context);
     setState(() => _capturing = true);
     final side = _scanningSide;
 
@@ -259,13 +267,40 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
 
       if (!mounted || !_active) return;
 
+      final checkBlur = side == CardSide.front;
+      final quality = await compute(
+        (args) => ImageQualityChecker.evaluate(args.photo, checkBlur: args.checkBlur),
+        (photo: photo, checkBlur: checkBlur),
+      );
+      if (!quality.isValid) {
+        if (!mounted || !_active) return;
+        setState(() => _capturing = false);
+        _stopMotion();
+        _scheduleCamera();
+        final retry = await navigator.push<bool>(
+          MaterialPageRoute(
+            builder: (_) => ScanQualityErrorPage(result: quality),
+          ),
+        );
+        if (!mounted) return;
+        if (retry != true) {
+          navigator.pop();
+        } else if (_active) {
+          _startMotion();
+          _scheduleCamera();
+        }
+        return;
+      }
+
+      if (!mounted || !_active) return;
+
       setState(() => _processing = true);
       _stopMotion();
       _scheduleCamera();
       var stopped = false;
       final processor = ScanProcessor();
       final progress = ValueNotifier<ScanProgress>(const ScanProgress(stage: ScanStage.loadReferences, fraction: 0));
-      final cropped = await Navigator.of(context).push<ScanResult>(
+      final cropped = await navigator.push<ScanResult>(
         MaterialPageRoute(
           builder: (_) => ScanProcessingPage(
             side: side,
@@ -297,9 +332,19 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
         setState(() {
           _frontPhoto = cropped.image;
           _identifiedFront = cropped.catalogCard;
+          _frontCentering = cropped.centering;
         });
       } else {
-        Navigator.of(context).pop((front: _frontPhoto!, back: cropped.image, catalogCard: _identifiedFront!));
+        final backCreases = await _reviewCreases(cropped.image);
+        if (!mounted) return;
+        navigator.pop((
+          front: _frontPhoto!,
+          back: cropped.image,
+          catalogCard: _identifiedFront!,
+          frontCentering: _frontCentering,
+          backCentering: cropped.centering,
+          backCreases: backCreases,
+        ));
       }
     } catch (error, stackTrace) {
       debugPrint('Card capture failed: $error\n$stackTrace');
@@ -320,6 +365,54 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
         });
       }
     }
+  }
+
+  Future<CreaseResult> _screenCreases(
+    JpegData photo,
+    Future<Uint8List?> reference,
+  ) async {
+    try {
+      final bytes = await reference;
+      Float32List? noise;
+      if (bytes != null) {
+        try {
+          noise = await (_referenceNoise ??= compute(
+            CreaseAnalyzer.referenceNoise,
+            bytes,
+          ));
+        } catch (_) {
+          _referenceNoise = null;
+          rethrow;
+        }
+      }
+      final result = await compute(CreaseAnalyzer.analyze, (
+        photo: photo.bytes,
+        reference: bytes,
+        expectedNoise: noise,
+        alignmentVerified: true,
+        minimumProminence: CreaseAnalyzer.minimumCandidateScore,
+      ));
+      return result;
+    } catch (error) {
+      debugPrint('Crease screening unavailable: $error');
+      return const CreaseResult.notEvaluated(
+        'Crease analysis unavailable. Your scan can still be saved.',
+      );
+    }
+  }
+
+  Future<Uint8List?> _backReference() async {
+    try {
+      final data = await rootBundle.load('assets/pokemon_back.png');
+      return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<CreaseAnalysis> _reviewCreases(JpegData back) async {
+    final analysis = await _screenCreases(back, _backReference());
+    return analysis.analysis;
   }
 
   @override

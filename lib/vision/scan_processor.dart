@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:cancellation_token/cancellation_token.dart';
 import 'package:flutter/foundation.dart';
 import 'package:opencv_dart/opencv_dart.dart' as cv;
+import 'package:pokemon_card_scanner/centering/centering_check.dart';
 import 'package:pokemon_card_scanner/models/card_side.dart';
 import 'package:pokemon_card_scanner/models/jpeg_data.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
@@ -18,8 +19,9 @@ import 'orb_index.dart';
 class ScanResult {
   final JpegData image;
   final CatalogPokemonCard? catalogCard;
+  final CenteringResult? centering;
 
-  const ScanResult({required this.image, this.catalogCard});
+  const ScanResult({required this.image, this.catalogCard, this.centering});
 }
 
 enum ScanStage {
@@ -110,7 +112,7 @@ class ScanProcessor {
       if (side == CardSide.front && catalogCard == null) return null;
 
       _notifyProgress(1, ScanStage.finalize, onProgress);
-      return ScanResult(image: cropped.image, catalogCard: catalogCard);
+      return ScanResult(image: cropped.image, catalogCard: catalogCard, centering: cropped.centering);
     } finally {
       await subscription.cancel();
       updates.close();
@@ -150,7 +152,7 @@ class ScanProcessor {
     }
   }
 
-  static ({JpegData image, String? cardId})? _cropCapturedCard(({JpegData image, CardSide side, List<Uint8List> shards, List<String> ids, SendPort progress}) input) {
+  static ({JpegData image, String? cardId, CenteringResult? centering})? _cropCapturedCard(({JpegData image, CardSide side, List<Uint8List> shards, List<String> ids, SendPort progress}) input) {
     _sendStageProgress(input.progress, ScanStage.identify, completed: 0);
     final image = cv.imdecode(input.image.bytes, cv.IMREAD_COLOR);
 
@@ -176,6 +178,13 @@ class ScanProcessor {
 
       if (scan == null) return null;
 
+      CenteringResult? centering;
+      try {
+        centering = checkCentering(image, front: input.side == CardSide.front);
+      } catch (error) {
+        debugPrint('Centering failed: $error');
+      }
+
       cv.Mat? flattened;
       final jpegParams = cv.VecI32.fromList([cv.IMWRITE_JPEG_QUALITY, 98]);
 
@@ -187,7 +196,7 @@ class ScanProcessor {
         final (success, jpeg) = cv.imencode('.jpg', flattened, params: jpegParams);
         _sendStageProgress(input.progress, ScanStage.encode);
         final reference = scan.reference;
-        return success ? (image: JpegData(jpeg), cardId: reference?.id) : null;
+        return success ? (image: JpegData(jpeg), cardId: reference?.id, centering: centering) : null;
       } finally {
         jpegParams.dispose();
         flattened?.dispose();
