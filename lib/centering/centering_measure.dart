@@ -19,6 +19,9 @@ const lineStep = 4;
 /// a change must last aprox 0.5 mm, longer than printed text strokes in the border
 const changeMustLastPixels = 10;
 
+/// border color only has to last aprox 0.2 mm to count, the bottom border has text close to the edge
+const borderMatchMustLastPixels = 10;
+
 /// how close a color must be to the card's border color to count as border
 const borderMatchThreshold = 60.0;
 
@@ -96,7 +99,7 @@ int? _firstLastingMatch(Uint8List pixels, List<int> line, int start, List<double
   for (var i = start; i < line.length; i++) {
     if (_difference(pixels, line[i], color) < threshold) {
       pixelsInARow++;
-      if (pixelsInARow == changeMustLastPixels) return i - changeMustLastPixels + 1;
+      if (pixelsInARow == borderMatchMustLastPixels) return i - borderMatchMustLastPixels + 1;
     } else {
       pixelsInARow = 0;
     }
