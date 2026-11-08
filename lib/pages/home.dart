@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:pokemon_card_scanner/centering/centering_check.dart';
+import 'package:pokemon_card_scanner/models/crease_analysis.dart';
 import 'package:pokemon_card_scanner/models/jpeg_data.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
 import 'package:pokemon_card_scanner/pages/card_details.dart';
 import 'package:pokemon_card_scanner/pages/catalog.dart';
+import 'package:pokemon_card_scanner/pages/grading/card_grading_page.dart';
 import 'package:pokemon_card_scanner/pages/scan/scan.dart';
 import 'package:pokemon_card_scanner/pages/scan/scan_guide.dart';
 import 'package:pokemon_card_scanner/repositories/app_preferences.dart';
@@ -45,15 +47,27 @@ class _HomePageState extends State<HomePage> {
       if (!mounted || ready != true) return;
     }
 
-    final photos = await Navigator.of(
-      context,
-    ).push<({JpegData front, JpegData back, CatalogPokemonCard catalogCard, CenteringResult? frontCentering, CenteringResult? backCentering})>(MaterialPageRoute(builder: (_) => const ScanPage()));
+    final scanResult = await Navigator.of(context)
+        .push<({JpegData front, JpegData back, CatalogPokemonCard catalogCard, CenteringResult? frontCentering, CenteringResult? backCentering, CreaseAnalysis backCreases})>(
+          MaterialPageRoute(builder: (_) => const ScanPage()),
+        );
 
-    if (!mounted || photos == null) return;
+    if (!mounted || scanResult == null) return;
 
-    final scannedCard = await ScannedCardRepository.instance.save(photos.front, photos.back, photos.catalogCard, frontCentering: photos.frontCentering, backCentering: photos.backCentering);
+    final scannedCard = await Navigator.of(context).push<ScannedPokemonCard>(
+      MaterialPageRoute(
+        builder: (_) => CardGradingPage(
+          frontPhoto: scanResult.front,
+          backPhoto: scanResult.back,
+          catalogCard: scanResult.catalogCard,
+          frontCentering: scanResult.frontCentering,
+          backCentering: scanResult.backCentering,
+          backCreases: scanResult.backCreases,
+        ),
+      ),
+    );
 
-    if (!mounted) return;
+    if (!mounted || scannedCard == null) return;
 
     setState(() {
       _cards = _cards.then((cards) {

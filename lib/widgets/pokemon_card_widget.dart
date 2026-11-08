@@ -20,9 +20,10 @@ class PokemonCardWidget extends StatelessWidget {
     final scannedCard = card is ScannedPokemonCard ? card as ScannedPokemonCard : null;
     final front = scannedCard?.frontCentering;
     final back = scannedCard?.backCentering;
-    final estimatedGrade = front == null || back == null
+    final centeringGrade = front == null || back == null
         ? null
         : GradingProfile.psa.centeringScore(frontLeftRight: front.leftRight, frontTopBottom: front.topBottom, backLeftRight: back.leftRight, backTopBottom: back.topBottom);
+    final estimatedGrade = scannedCard?.estimatedGrading ?? scannedCard?.gradeReport?.overallScore ?? centeringGrade;
     final cardTitle = catalogCard.name;
     final setText = catalogCard.setName;
 

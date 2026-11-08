@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:pokemon_card_scanner/models/grading_profile.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
+import 'package:pokemon_card_scanner/pages/grade_overview.dart';
 import 'package:pokemon_card_scanner/repositories/scanned_card_repository.dart';
 import 'package:pokemon_card_scanner/vision/card_constants.dart';
 import 'package:pokemon_card_scanner/widgets/grading/centering_details.dart';
@@ -39,13 +40,15 @@ class _CardDetailsPage extends StatelessWidget {
     final title = catalogCard.name;
     final front = scannedCard?.frontCentering;
     final back = scannedCard?.backCentering;
-    final grade = front == null || back == null
+    final overallGrade = scannedCard?.estimatedGrading ?? scannedCard?.gradeReport?.overallScore;
+    final centeringGrade = front == null || back == null
         ? null
         : GradingProfile.psa.centeringScore(frontLeftRight: front.leftRight, frontTopBottom: front.topBottom, backLeftRight: back.leftRight, backTopBottom: back.topBottom);
+    final grade = overallGrade ?? centeringGrade;
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        padding: EdgeInsets.fromLTRB(24, 16, 24, 40 + MediaQuery.paddingOf(context).bottom),
         children: [
           Center(child: _CardImageCarousel(card: card)),
           const SizedBox(height: 24),
@@ -53,7 +56,7 @@ class _CardDetailsPage extends StatelessWidget {
           const SizedBox(height: 16),
           if (scannedCard != null)
             _DetailRow(
-              label: 'Estimated grade',
+              label: overallGrade == null && centeringGrade != null ? 'Centering estimate' : 'Estimated grade',
               value: grade == null
                   ? const Text('Unavailable')
                   : Align(
@@ -69,8 +72,18 @@ class _CardDetailsPage extends StatelessWidget {
               value: Text('${MaterialLocalizations.of(context).formatShortDate(scannedCard.createdAt.toLocal())} ${TimeOfDay.fromDateTime(scannedCard.createdAt.toLocal()).format(context)}'),
             ),
             const SizedBox(height: 16),
-            _GradingBreakdown(card: scannedCard),
-            const SizedBox(height: 24),
+            if (overallGrade != null) ...[
+              FilledButton.tonalIcon(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => GradeOverviewPage(card: scannedCard))),
+                icon: const Icon(Icons.analytics_outlined),
+                label: const Text('View grade overview'),
+              ),
+              const SizedBox(height: 16),
+            ],
+            if (scannedCard.gradeReport == null && (front != null || back != null)) ...[
+              _GradingBreakdown(card: scannedCard),
+              const SizedBox(height: 24),
+            ],
             OutlinedButton.icon(
               onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogCardDetailsPage(catalogCard))),
               icon: const Icon(Icons.collections_bookmark_outlined),

@@ -93,7 +93,7 @@ int? _firstLastingChange(Uint8List pixels, List<int> line, int start, List<doubl
   return null;
 }
 
-/// opposite of _firstLastingChange: finds where the color first becomes like the given color, and stays that way for changeMustLastPixels in a row
+/// finds where the color first matches and stays that way for borderMatchMustLastPixels in a row
 int? _firstLastingMatch(Uint8List pixels, List<int> line, int start, List<double> color, double threshold) {
   var pixelsInARow = 0;
   for (var i = start; i < line.length; i++) {
