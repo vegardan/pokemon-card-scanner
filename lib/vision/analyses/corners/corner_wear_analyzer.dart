@@ -28,7 +28,7 @@ class CornerWearAnalyzer implements CardAnalyzer {
   AnalysisCategory get category => AnalysisCategory.corners;
 
   @override
-  bool get isEnabled => true;
+  bool get isEnabled => false;
 
   @override
   Future<AnalysisResult> analyze(AnalysisInput input) async {

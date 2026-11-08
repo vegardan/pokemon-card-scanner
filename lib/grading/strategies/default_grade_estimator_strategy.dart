@@ -34,24 +34,15 @@ class DefaultGradeEstimatorStrategy implements GradeEstimatorStrategy {
               details: {'unimplemented': true, 'note': 'Edge wear analysis has not been implemented yet.'},
             ),
           );
-        case CornerAnalysisResult k:
-          final damaged = k.backCorners.where((c) => c.isDamaged).map((c) => c.name).toList();
-
-          final double score;
-          final String description;
-
-          if (damaged.isNotEmpty) {
-            score = (10.0 - (damaged.length * 1.0) - (k.maxCornerWear * 1.5)).clamp(1.0, 8.5);
-            description = '${damaged.join(', ')} wear detected';
-          } else if (k.maxCornerWear > 0.4) {
-            score = 9.0;
-            description = 'Minor corner wear detected';
-          } else {
-            score = 9.5;
-            description = 'Clean corners';
-          }
-
-          subGrades.add(SubGrade(category: 'Corners', score: score, description: description, details: {'backCorners': k.backCorners.map((c) => c.toJson()).toList()}));
+        case CornerAnalysisResult _:
+          subGrades.add(
+            const SubGrade(
+              category: 'Corners',
+              score: 0.0,
+              description: 'Corner wear analysis has not been implemented yet',
+              details: {'unimplemented': true, 'note': 'Corner wear analysis has not been implemented yet.'},
+            ),
+          );
         case SurfaceAnalysisResult s:
           final double score;
           final String description;
@@ -72,6 +63,21 @@ class DefaultGradeEstimatorStrategy implements GradeEstimatorStrategy {
               details: {'defectCount': s.defectCount, 'defectAreaRatio': s.defectAreaRatio, if (s.creaseAnalysis != null) 'creaseStatus': s.creaseAnalysis!.status.name},
             ),
           );
+      }
+    }
+
+    if (!subGrades.any((s) => s.category == 'Corners')) {
+      const cornerStub = SubGrade(
+        category: 'Corners',
+        score: 0.0,
+        description: 'Corner wear analysis has not been implemented yet',
+        details: {'unimplemented': true, 'note': 'Corner wear analysis has not been implemented yet.'},
+      );
+      final edgeIndex = subGrades.indexWhere((s) => s.category == 'Edges');
+      if (edgeIndex != -1) {
+        subGrades.insert(edgeIndex + 1, cornerStub);
+      } else {
+        subGrades.add(cornerStub);
       }
     }
 
