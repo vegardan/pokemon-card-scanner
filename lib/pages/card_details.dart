@@ -1,11 +1,13 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:pokemon_card_scanner/controllers/grading_profile_controller.dart';
+import 'package:pokemon_card_scanner/models/grading_profile.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
 import 'package:pokemon_card_scanner/pages/grade_overview.dart';
 import 'package:pokemon_card_scanner/repositories/scanned_card_repository.dart';
 import 'package:pokemon_card_scanner/vision/card_constants.dart';
+import 'package:pokemon_card_scanner/widgets/grading/centering_details.dart';
 import 'package:pokemon_card_scanner/widgets/grading/grade_badge.dart';
+import 'package:pokemon_card_scanner/widgets/grading/grading_section.dart';
 import 'package:pokemon_card_scanner/widgets/image_carousel/image_carousel.dart';
 
 class OwnedCardDetailsPage extends StatelessWidget {
@@ -14,7 +16,7 @@ class OwnedCardDetailsPage extends StatelessWidget {
   const OwnedCardDetailsPage(this.card, {super.key});
 
   @override
-  Widget build(BuildContext context) => CardDetailsPage(card);
+  Widget build(BuildContext context) => _CardDetailsPage(card);
 }
 
 class CatalogCardDetailsPage extends StatelessWidget {
@@ -23,80 +25,80 @@ class CatalogCardDetailsPage extends StatelessWidget {
   const CatalogCardDetailsPage(this.card, {super.key});
 
   @override
-  Widget build(BuildContext context) => CardDetailsPage(card);
+  Widget build(BuildContext context) => _CardDetailsPage(card);
 }
 
-class CardDetailsPage extends StatelessWidget {
+class _CardDetailsPage extends StatelessWidget {
   final PokemonCard card;
 
-  const CardDetailsPage(this.card, {super.key});
+  const _CardDetailsPage(this.card);
 
   @override
   Widget build(BuildContext context) {
     final catalogCard = card.catalogCard;
     final scannedCard = card is ScannedPokemonCard ? card as ScannedPokemonCard : null;
     final title = catalogCard.name;
-
-    return ListenableBuilder(
-      listenable: GradingProfileController.instance,
-      builder: (context, _) {
-        final profile = GradingProfileController.instance.value;
-        final front = scannedCard?.frontCentering;
-        final back = scannedCard?.backCentering;
-        final centeringGrade = front == null || back == null
-            ? null
-            : profile.centeringScore(frontLeftRight: front.leftRight, frontTopBottom: front.topBottom, backLeftRight: back.leftRight, backTopBottom: back.topBottom);
-
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(title),
-            actions: [if (scannedCard != null) IconButton(tooltip: 'Delete card', icon: const Icon(Icons.delete_outline), onPressed: () => _deleteCard(context, scannedCard))],
-          ),
-          body: ListView(
-            padding: EdgeInsets.fromLTRB(24, 16, 24, 40 + MediaQuery.paddingOf(context).bottom),
-            children: [
-              Center(child: _CardImageCarousel(card: card)),
-              const SizedBox(height: 24),
-              Text(title, style: Theme.of(context).textTheme.headlineSmall),
+    final front = scannedCard?.frontCentering;
+    final back = scannedCard?.backCentering;
+    final overallGrade = scannedCard?.estimatedGrading ?? scannedCard?.gradeReport?.overallScore;
+    final centeringGrade = front == null || back == null
+        ? null
+        : GradingProfile.psa.centeringScore(frontLeftRight: front.leftRight, frontTopBottom: front.topBottom, backLeftRight: back.leftRight, backTopBottom: back.topBottom);
+    final grade = overallGrade ?? centeringGrade;
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(24, 16, 24, 40 + MediaQuery.paddingOf(context).bottom),
+        children: [
+          Center(child: _CardImageCarousel(card: card)),
+          const SizedBox(height: 24),
+          Text(title, style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: 16),
+          if (scannedCard != null)
+            _DetailRow(
+              label: overallGrade == null && centeringGrade != null ? 'Centering estimate' : 'Estimated grade',
+              value: grade == null
+                  ? const Text('Unavailable')
+                  : Align(
+                      alignment: Alignment.centerLeft,
+                      child: GradeBadge(grade: grade, showPsaLabel: true),
+                    ),
+            ),
+          _DetailRow(label: 'Set', value: Text(catalogCard.setName)),
+          _DetailRow(label: 'Card ID', value: Text(catalogCard.id)),
+          if (scannedCard != null) ...[
+            _DetailRow(
+              label: 'Scanned',
+              value: Text('${MaterialLocalizations.of(context).formatShortDate(scannedCard.createdAt.toLocal())} ${TimeOfDay.fromDateTime(scannedCard.createdAt.toLocal()).format(context)}'),
+            ),
+            const SizedBox(height: 16),
+            if (overallGrade != null) ...[
+              FilledButton.tonalIcon(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => GradeOverviewPage(card: scannedCard))),
+                icon: const Icon(Icons.analytics_outlined),
+                label: const Text('View grade overview'),
+              ),
               const SizedBox(height: 16),
-              if (scannedCard != null)
-                _DetailRow(
-                  label: 'Estimated grade',
-                  value: Align(
-                    alignment: Alignment.centerLeft,
-                    child: scannedCard.estimatedGrading != null
-                        ? GradeBadge(grade: scannedCard.estimatedGrading!, profileName: profile.shortName)
-                        : (centeringGrade != null ? GradeBadge(grade: centeringGrade, profileName: profile.shortName) : const Text('Not available')),
-                  ),
-                ),
-              _DetailRow(label: 'Set', value: Text(catalogCard.setName)),
-              _DetailRow(label: 'Card ID', value: Text(catalogCard.id)),
-              if (scannedCard != null) ...[
-                _DetailRow(
-                  label: 'Scanned',
-                  value: Text('${MaterialLocalizations.of(context).formatShortDate(scannedCard.createdAt.toLocal())} ${TimeOfDay.fromDateTime(scannedCard.createdAt.toLocal()).format(context)}'),
-                ),
-                const SizedBox(height: 16),
-                if (scannedCard.gradeReport != null || scannedCard.estimatedGrading != null) ...[
-                  FilledButton.tonalIcon(
-                    onPressed: () {
-                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => GradeOverviewPage(card: scannedCard)));
-                    },
-                    icon: const Icon(Icons.analytics_outlined),
-                    label: const Text('View grade overview'),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                OutlinedButton.icon(
-                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogCardDetailsPage(catalogCard))),
-                  icon: const Icon(Icons.collections_bookmark_outlined),
-                  label: const Text('View in catalog'),
-                ),
-              ],
             ],
-          ),
-        );
-      },
+            if (scannedCard.gradeReport == null && (front != null || back != null)) ...[
+              _GradingBreakdown(card: scannedCard),
+              const SizedBox(height: 24),
+            ],
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogCardDetailsPage(catalogCard))),
+              icon: const Icon(Icons.collections_bookmark_outlined),
+              label: const Text('View in catalog'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () => _deleteCard(context, scannedCard),
+              style: OutlinedButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+              icon: const Icon(Icons.delete_outline),
+              label: const Text('Delete card'),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -117,12 +119,16 @@ class CardDetailsPage extends StatelessWidget {
       ),
     );
 
-    if (confirmed == true && context.mounted) {
+    if (confirmed != true || !context.mounted) return;
+
+    try {
       await ScannedCardRepository.instance.delete(card);
 
-      if (context.mounted) {
-        Navigator.pop(context, true);
-      }
+      if (context.mounted) Navigator.pop(context, true);
+    } catch (_) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not delete the card. Please try again.')));
     }
   }
 }
@@ -134,24 +140,25 @@ class _CardImageCarousel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageUrl = card.catalogCard.imageUrl;
     final scannedCard = card is ScannedPokemonCard ? card as ScannedPokemonCard : null;
-    final catalogCard = card.catalogCard;
+    final items = <ImageCarouselItem>[
+      if (scannedCard != null) ...[ImageCarouselItem(imageProvider: scannedCard.frontImage, semanticLabel: 'Front'), ImageCarouselItem(imageProvider: scannedCard.backImage, semanticLabel: 'Back')],
+    ];
 
-    final items = <ImageCarouselItem>[];
-
-    if (scannedCard != null) {
-      items.add(ImageCarouselItem(imageProvider: scannedCard.frontImage, semanticLabel: 'Front photo of ${catalogCard.name}'));
-      items.add(ImageCarouselItem(imageProvider: scannedCard.backImage, semanticLabel: 'Back photo of ${catalogCard.name}'));
-    }
-
-    if (catalogCard.imageUrl != null) {
-      items.add(ImageCarouselItem(imageProvider: CachedNetworkImageProvider(catalogCard.imageUrl!), semanticLabel: 'Catalog image of ${catalogCard.name}'));
+    if (items.isEmpty) {
+      items.add(
+        ImageCarouselItem(
+          imageProvider: imageUrl != null && imageUrl.isNotEmpty ? CachedNetworkImageProvider(imageUrl) : const AssetImage('assets/pokemon_back_monochrome.png'),
+          semanticLabel: card.catalogCard.name,
+        ),
+      );
     }
 
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 300),
+      constraints: const BoxConstraints(maxWidth: 360),
       child: LayoutBuilder(
-        builder: (context, constraints) => ImageCarousel(items: items, height: constraints.maxWidth / CardConstants.cardAspectRatio, fit: BoxFit.contain, showLabels: true),
+        builder: (context, constraints) => ImageCarousel(items: items, height: constraints.maxWidth / CardConstants.cardAspectRatio, fit: BoxFit.contain, showLabels: scannedCard != null),
       ),
     );
   }
@@ -174,6 +181,29 @@ class _DetailRow extends StatelessWidget {
           Expanded(child: value),
         ],
       ),
+    );
+  }
+}
+
+class _GradingBreakdown extends StatelessWidget {
+  final ScannedPokemonCard card;
+
+  const _GradingBreakdown({required this.card});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Grading breakdown', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 8),
+        GradingSection(
+          title: 'Centering',
+          subtitle: 'Front and back border balance',
+          icon: Icons.center_focus_strong_outlined,
+          child: CenteringDetails(front: card.frontCentering, back: card.backCentering),
+        ),
+      ],
     );
   }
 }

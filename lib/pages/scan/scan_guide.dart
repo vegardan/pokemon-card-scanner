@@ -81,7 +81,16 @@ class _ScanGuidePageState extends State<ScanGuidePage> {
                         title: 'Keep the camera level',
                         description: 'Hold your phone directly above the card. Use the level indicator to check your position.',
                       ),
-                      const _GuideTip(icon: Icons.wb_sunny_outlined, title: 'Use even lighting', description: 'Light the whole card evenly, without dark areas or shadows.'),
+                      const _GuideTip(
+                        icon: Icons.wb_sunny_outlined,
+                        title: 'Use even lighting',
+                        description: 'Light the whole card evenly, for example natural light from a window. Avoid shadows on or next to the card.',
+                      ),
+                      const _GuideTip(
+                        icon: Icons.crop_square_outlined,
+                        title: 'Use a plain background',
+                        description: 'Place the card on a solid color background that is clearly different from the card\'s border color.',
+                      ),
                       const _GuideTip(icon: Icons.visibility_outlined, title: 'Avoid reflections', description: 'Move the light or card until no glare or reflections cover the card\'s details.'),
                       const _GuideTip(
                         icon: Icons.center_focus_strong,

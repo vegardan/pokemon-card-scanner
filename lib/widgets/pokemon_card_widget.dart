@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:pokemon_card_scanner/models/grading_profile.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
+import 'package:pokemon_card_scanner/widgets/grading/grade_badge.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 class PokemonCardWidget extends StatelessWidget {
@@ -16,7 +18,12 @@ class PokemonCardWidget extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final catalogCard = card.catalogCard;
     final scannedCard = card is ScannedPokemonCard ? card as ScannedPokemonCard : null;
-    final estimatedGrade = scannedCard?.estimatedGrading;
+    final front = scannedCard?.frontCentering;
+    final back = scannedCard?.backCentering;
+    final centeringGrade = front == null || back == null
+        ? null
+        : GradingProfile.psa.centeringScore(frontLeftRight: front.leftRight, frontTopBottom: front.topBottom, backLeftRight: back.leftRight, backTopBottom: back.topBottom);
+    final estimatedGrade = scannedCard?.estimatedGrading ?? scannedCard?.gradeReport?.overallScore ?? centeringGrade;
     final cardTitle = catalogCard.name;
     final setText = catalogCard.setName;
 
@@ -44,7 +51,7 @@ class PokemonCardWidget extends StatelessWidget {
                       padding: const EdgeInsets.all(8),
                       child: _CardImage(card: catalogCard, capturedImage: scannedCard?.frontImage, emptyCardImage: _emptyCardImage),
                     ),
-                    if (estimatedGrade != null) Positioned(top: 8, right: 8, child: _GradeBadge(grade: estimatedGrade)),
+                    if (estimatedGrade != null) Positioned(top: 8, right: 8, child: GradeBadge(grade: estimatedGrade)),
                   ],
                 ),
               ),
@@ -163,44 +170,6 @@ class _CardDetails extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _GradeBadge extends StatelessWidget {
-  final int grade;
-
-  const _GradeBadge({required this.grade});
-
-  Color get _gradeColor {
-    final normalizedGrade = grade.clamp(1, 10) / 10;
-
-    if (normalizedGrade < 0.6) {
-      return Color.lerp(const Color(0xFFEF4444), const Color(0xFFF59E0B), normalizedGrade / 0.6)!;
-    }
-
-    return Color.lerp(const Color(0xFFF59E0B), const Color(0xFF22C55E), (normalizedGrade - 0.6) / 0.4)!;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final badgeColor = _gradeColor;
-    final foregroundColor = ThemeData.estimateBrightnessForColor(badgeColor) == Brightness.dark ? Colors.white : Colors.black;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: badgeColor.withValues(alpha: 0.82),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: badgeColor.withValues(alpha: 0.5)),
-        boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 4, offset: Offset(0, 2))],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        child: Text(
-          grade.toString(),
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(color: foregroundColor, fontWeight: FontWeight.w800),
-        ),
       ),
     );
   }

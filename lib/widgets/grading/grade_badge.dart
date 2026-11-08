@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 class GradeBadge extends StatelessWidget {
   final num grade;
-  final String? profileName;
+  final bool showPsaLabel;
 
-  const GradeBadge({super.key, required this.grade, this.profileName});
+  const GradeBadge({super.key, required this.grade, this.showPsaLabel = false});
 
   Color get _gradeColor {
     final normalizedGrade = grade.clamp(1, 10) / 10;
@@ -32,7 +32,7 @@ class GradeBadge extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         child: Text(
-          profileName == null ? gradeText : '$profileName $gradeText',
+          showPsaLabel ? 'PSA $gradeText' : gradeText,
           style: Theme.of(context).textTheme.labelLarge?.copyWith(color: foregroundColor, fontWeight: FontWeight.w800),
         ),
       ),

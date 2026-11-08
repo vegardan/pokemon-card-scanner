@@ -14,9 +14,11 @@ void main() {
       () async {
         final db = _SchemaDatabase(state.$1, state.$2);
         await ScannedCardRepository.upgradeSchema(db);
+        expect(db.estimatedGrade, isTrue);
+        expect(db.gradeReport, isTrue);
         expect(db.crease, isTrue);
         expect(db.centering, isTrue);
-        expect(db.executed.length, (state.$1 ? 0 : 1) + (state.$2 ? 0 : 1));
+        expect(db.executed.length, 2 + (state.$1 ? 0 : 1) + (state.$2 ? 0 : 1));
         final count = db.executed.length;
         await ScannedCardRepository.upgradeSchema(db);
         expect(db.executed.length, count);
@@ -32,6 +34,8 @@ void main() {
 }
 
 class _SchemaDatabase implements DatabaseExecutor {
+  bool estimatedGrade = false;
+  bool gradeReport = false;
   bool crease, centering;
   final executed = <String>[];
   _SchemaDatabase(this.crease, this.centering);
@@ -43,6 +47,8 @@ class _SchemaDatabase implements DatabaseExecutor {
   ]) async {
     if (sql == 'PRAGMA table_info(scanned_cards)') {
       return [
+        if (estimatedGrade) {'name': 'estimated_grade'},
+        if (gradeReport) {'name': 'grade_report_json'},
         if (crease) {'name': 'back_crease_analysis'},
       ];
     }
@@ -57,7 +63,15 @@ class _SchemaDatabase implements DatabaseExecutor {
   @override
   Future<void> execute(String sql, [List<Object?>? arguments]) async {
     executed.add(sql);
-    if (sql.startsWith(
+    if (sql.startsWith('ALTER TABLE scanned_cards ADD COLUMN estimated_grade')) {
+      expect(estimatedGrade, isFalse);
+      estimatedGrade = true;
+    } else if (sql.startsWith(
+      'ALTER TABLE scanned_cards ADD COLUMN grade_report_json',
+    )) {
+      expect(gradeReport, isFalse);
+      gradeReport = true;
+    } else if (sql.startsWith(
       'ALTER TABLE scanned_cards ADD COLUMN back_crease_analysis',
     )) {
       expect(crease, isFalse);

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:pokemon_card_scanner/controllers/grading_profile_controller.dart';
 import 'package:pokemon_card_scanner/models/analysis/estimated_grade.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
 import 'package:pokemon_card_scanner/pages/grade_overview.dart';
@@ -15,48 +14,41 @@ class CenteringDetailsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = GradeOverviewPage.gradeColor(subGrade.score);
 
-    return ListenableBuilder(
-      listenable: GradingProfileController.instance,
-      builder: (context, _) {
-        final profile = GradingProfileController.instance.value;
-
-        return Scaffold(
-          appBar: AppBar(title: const Text('Centering details')),
-          body: ListView(
-            padding: EdgeInsets.fromLTRB(20, 16, 20, 40 + MediaQuery.paddingOf(context).bottom),
-            children: [
-              _ScoreSummaryCard(subGrade: subGrade, color: color),
-              if (subGrade.details?['note'] != null) ...[
-                const SizedBox(height: 12),
-                Card(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                  elevation: 0,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.info_outline, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(subGrade.details!['note'] as String, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.35)),
-                        ),
-                      ],
+    return Scaffold(
+      appBar: AppBar(title: const Text('Centering details')),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(20, 16, 20, 40 + MediaQuery.paddingOf(context).bottom),
+        children: [
+          _ScoreSummaryCard(subGrade: subGrade, color: color),
+          if (subGrade.details?['note'] != null) ...[
+            const SizedBox(height: 12),
+            Card(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              elevation: 0,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(subGrade.details!['note'] as String, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.35)),
                     ),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 20),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: CenteringDetails(front: card.frontCentering, back: card.backCentering, profile: profile),
+                  ],
                 ),
               ),
-            ],
+            ),
+          ],
+          const SizedBox(height: 20),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: CenteringDetails(front: card.frontCentering, back: card.backCentering),
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }

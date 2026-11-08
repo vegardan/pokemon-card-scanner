@@ -321,6 +321,11 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
         return;
       }
 
+      if (cropped.centering == null) {
+        await _showScanError('Could not measure ${side == CardSide.front ? 'front' : 'back'} centering. Please retake the photo.', side: side);
+        return;
+      }
+
       if (side == CardSide.front) {
         setState(() {
           _frontPhoto = cropped.image;
