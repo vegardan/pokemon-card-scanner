@@ -32,21 +32,15 @@ class PSAGradeEstimatorStrategy implements GradeEstimatorStrategy {
             ),
           );
 
-        case CornerAnalysisResult k:
-          final damaged = k.backCorners.where((c) => c.isDamaged).map((c) => c.name).toList();
-
-          final double score;
-          final String description;
-
-          if (damaged.isNotEmpty) {
-            score = 2.0;
-            description = '${damaged.join(', ')} wear detected (PSA 2 max)';
-          } else {
-            score = 10.0;
-            description = 'Clean corners';
-          }
-
-          subGrades.add(SubGrade(category: 'Corners', score: score, description: description, details: {'backCorners': k.backCorners.map((c) => c.toJson()).toList()}));
+        case CornerAnalysisResult _:
+          subGrades.add(
+            const SubGrade(
+              category: 'Corners',
+              score: 0.0,
+              description: 'Corner wear analysis has not been implemented yet',
+              details: {'unimplemented': true, 'note': 'Corner wear analysis has not been implemented yet.'},
+            ),
+          );
 
         case SurfaceAnalysisResult s:
           final bool isNotEvaluated = s.creaseAnalysis?.status == CreaseStatus.notEvaluated;
@@ -67,6 +61,21 @@ class PSAGradeEstimatorStrategy implements GradeEstimatorStrategy {
           }
 
           subGrades.add(SubGrade(category: 'Creases', score: score, description: description, details: details));
+      }
+    }
+
+    if (!subGrades.any((s) => s.category == 'Corners')) {
+      const cornerStub = SubGrade(
+        category: 'Corners',
+        score: 0.0,
+        description: 'Corner wear analysis has not been implemented yet',
+        details: {'unimplemented': true, 'note': 'Corner wear analysis has not been implemented yet.'},
+      );
+      final edgeIndex = subGrades.indexWhere((s) => s.category == 'Edges');
+      if (edgeIndex != -1) {
+        subGrades.insert(edgeIndex + 1, cornerStub);
+      } else {
+        subGrades.add(cornerStub);
       }
     }
 
