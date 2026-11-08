@@ -20,7 +20,7 @@ const lineStep = 4;
 const changeMustLastPixels = 10;
 
 /// border color only has to last aprox 0.2 mm to count, the bottom border has text close to the edge
-const borderMatchMustLastPixels = 10;
+const borderMatchMustLastPixels = 4;
 
 /// how close a color must be to the card's border color to count as border
 const borderMatchThreshold = 60.0;
