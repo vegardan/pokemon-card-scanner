@@ -2,15 +2,7 @@ import 'dart:convert';
 
 /// Coordinates belong to the resized, perspective-corrected back image.
 /// Endpoints describe a line hypothesis, not measured physical damage length.
-typedef PossibleCrease = ({
-  double angle,
-  double rho,
-  double x1,
-  double y1,
-  double x2,
-  double y2,
-  double prominence,
-});
+typedef PossibleCrease = ({double angle, double rho, double x1, double y1, double x2, double y2, double prominence});
 
 enum CreaseStatus { notEvaluated, noCandidates, possibleCreases }
 
@@ -18,28 +10,18 @@ enum CreaseStatus { notEvaluated, noCandidates, possibleCreases }
 class CreaseAnalysis {
   static const schemaVersion = 1;
   static const method = 'back_tiled_reference_v1';
-  static const unavailable = CreaseAnalysis.notEvaluated(
-    'No stored crease analysis.',
-  );
+  static const unavailable = CreaseAnalysis.notEvaluated('No stored crease analysis.');
 
   final int width, height;
   final List<PossibleCrease> candidates;
   final String? notEvaluatedReason;
 
-  CreaseAnalysis({
-    required this.width,
-    required this.height,
-    required List<PossibleCrease> candidates,
-  }) : candidates = List.unmodifiable(candidates),
-       notEvaluatedReason = null;
+  CreaseAnalysis({required this.width, required this.height, required List<PossibleCrease> candidates}) : candidates = List.unmodifiable(candidates), notEvaluatedReason = null;
 
-  const CreaseAnalysis.notEvaluated(String reason)
-    : width = 0,
-      height = 0,
-      candidates = const [],
-      notEvaluatedReason = reason;
+  const CreaseAnalysis.notEvaluated(String reason) : width = 0, height = 0, candidates = const [], notEvaluatedReason = reason;
 
   bool get evaluated => notEvaluatedReason == null;
+
   CreaseStatus get status => !evaluated
       ? CreaseStatus.notEvaluated
       : candidates.isEmpty
@@ -54,16 +36,7 @@ class CreaseAnalysis {
     'height': height,
     'reason': notEvaluatedReason,
     'candidates': [
-      for (final line in candidates)
-        {
-          'angle': line.angle,
-          'rho': line.rho,
-          'x1': line.x1,
-          'y1': line.y1,
-          'x2': line.x2,
-          'y2': line.y2,
-          'prominence': line.prominence,
-        },
+      for (final line in candidates) {'angle': line.angle, 'rho': line.rho, 'x1': line.x1, 'y1': line.y1, 'x2': line.x2, 'y2': line.y2, 'prominence': line.prominence},
     ],
   };
 
@@ -73,9 +46,7 @@ class CreaseAnalysis {
     try {
       final json = jsonDecode(stored) as Map<String, dynamic>;
       if (json['schemaVersion'] != schemaVersion || json['method'] != method) {
-        return const CreaseAnalysis.notEvaluated(
-          'Stored crease analysis uses an unsupported version.',
-        );
+        return const CreaseAnalysis.notEvaluated('Stored crease analysis uses an unsupported version.');
       }
       if (json['status'] == CreaseStatus.notEvaluated.name) {
         return CreaseAnalysis.notEvaluated(json['reason'] as String);
@@ -105,19 +76,13 @@ class CreaseAnalysis {
           prominence: number(line, 'prominence'),
         ));
       }
-      final analysis = CreaseAnalysis(
-        width: width,
-        height: height,
-        candidates: candidates,
-      );
+      final analysis = CreaseAnalysis(width: width, height: height, candidates: candidates);
       if (analysis.status.name != json['status']) {
         throw const FormatException('Inconsistent status');
       }
       return analysis;
     } catch (_) {
-      return const CreaseAnalysis.notEvaluated(
-        'Stored crease analysis could not be read.',
-      );
+      return const CreaseAnalysis.notEvaluated('Stored crease analysis could not be read.');
     }
   }
 }

@@ -268,20 +268,13 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
       if (!mounted || !_active) return;
 
       final checkBlur = side == CardSide.front;
-      final quality = await compute(
-        (args) => ImageQualityChecker.evaluate(args.photo, checkBlur: args.checkBlur),
-        (photo: photo, checkBlur: checkBlur),
-      );
+      final quality = await compute((args) => ImageQualityChecker.evaluate(args.photo, checkBlur: args.checkBlur), (photo: photo, checkBlur: checkBlur));
       if (!quality.isValid) {
         if (!mounted || !_active) return;
         setState(() => _capturing = false);
         _stopMotion();
         _scheduleCamera();
-        final retry = await navigator.push<bool>(
-          MaterialPageRoute(
-            builder: (_) => ScanQualityErrorPage(result: quality),
-          ),
-        );
+        final retry = await navigator.push<bool>(MaterialPageRoute(builder: (_) => ScanQualityErrorPage(result: quality)));
         if (!mounted) return;
         if (retry != true) {
           navigator.pop();
@@ -337,14 +330,7 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
       } else {
         final backCreases = await _reviewCreases(cropped.image);
         if (!mounted) return;
-        navigator.pop((
-          front: _frontPhoto!,
-          back: cropped.image,
-          catalogCard: _identifiedFront!,
-          frontCentering: _frontCentering,
-          backCentering: cropped.centering,
-          backCreases: backCreases,
-        ));
+        navigator.pop((front: _frontPhoto!, back: cropped.image, catalogCard: _identifiedFront!, frontCentering: _frontCentering, backCentering: cropped.centering, backCreases: backCreases));
       }
     } catch (error, stackTrace) {
       debugPrint('Card capture failed: $error\n$stackTrace');
@@ -367,19 +353,13 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
     }
   }
 
-  Future<CreaseResult> _screenCreases(
-    JpegData photo,
-    Future<Uint8List?> reference,
-  ) async {
+  Future<CreaseResult> _screenCreases(JpegData photo, Future<Uint8List?> reference) async {
     try {
       final bytes = await reference;
       Float32List? noise;
       if (bytes != null) {
         try {
-          noise = await (_referenceNoise ??= compute(
-            CreaseAnalyzer.referenceNoise,
-            bytes,
-          ));
+          noise = await (_referenceNoise ??= compute(CreaseAnalyzer.referenceNoise, bytes));
         } catch (_) {
           _referenceNoise = null;
           rethrow;
@@ -395,9 +375,7 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
       return result;
     } catch (error) {
       debugPrint('Crease screening unavailable: $error');
-      return const CreaseResult.notEvaluated(
-        'Crease analysis unavailable. Your scan can still be saved.',
-      );
+      return const CreaseResult.notEvaluated('Crease analysis unavailable. Your scan can still be saved.');
     }
   }
 

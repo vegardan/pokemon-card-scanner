@@ -20,11 +20,6 @@ class EdgeWhiteningAnalyzer implements CardAnalyzer {
   @override
   Future<AnalysisResult> analyze(AnalysisInput input) async {
     // Stub implementation
-    return const EdgeAnalysisResult(
-      analyzerId: 'edge_whitening',
-      confidence: 0.90,
-      defectPerimeterRatio: 0.01,
-      maxDefectLengthPixels: 2.0,
-    );
+    return const EdgeAnalysisResult(analyzerId: 'edge_whitening', confidence: 0.90, defectPerimeterRatio: 0.01, maxDefectLengthPixels: 2.0);
   }
 }

@@ -15,13 +15,7 @@ class ImageQualityChecker {
     final original = cv.imdecode(photo.bytes, cv.IMREAD_COLOR);
 
     if (original.isEmpty) {
-      return ImageQualityResult(
-        isBlurry: false,
-        hasGlare: false,
-        blurScore: 0,
-        glarePercentage: 0,
-        rawPhoto: photo,
-      );
+      return ImageQualityResult(isBlurry: false, hasGlare: false, blurScore: 0, glarePercentage: 0, rawPhoto: photo);
     }
 
     cv.Mat? scaled;
@@ -74,14 +68,7 @@ class ImageQualityChecker {
         box.dispose();
       }
 
-      return ImageQualityResult(
-        isBlurry: isBlurry,
-        hasGlare: hasGlare,
-        blurScore: blurScore,
-        glarePercentage: glarePercentage,
-        rawPhoto: photo,
-        annotatedGlarePhoto: annotatedGlarePhoto,
-      );
+      return ImageQualityResult(isBlurry: isBlurry, hasGlare: hasGlare, blurScore: blurScore, glarePercentage: glarePercentage, rawPhoto: photo, annotatedGlarePhoto: annotatedGlarePhoto);
     } finally {
       roiRect?.dispose();
       roi?.dispose();

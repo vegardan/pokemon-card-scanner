@@ -21,22 +21,11 @@ class GradingPipeline {
   final List<CardAnalyzer> analyzers;
   final GradeEstimatorStrategy strategy;
 
-  GradingPipeline({
-    List<CardAnalyzer>? analyzers,
-    this.strategy = const PSAGradeEstimatorStrategy(),
-  }) : analyzers = analyzers ?? defaultAnalyzers;
+  GradingPipeline({List<CardAnalyzer>? analyzers, this.strategy = const PSAGradeEstimatorStrategy()}) : analyzers = analyzers ?? defaultAnalyzers;
 
-  static const List<CardAnalyzer> defaultAnalyzers = [
-    CenteringAnalyzer(),
-    EdgeWhiteningAnalyzer(),
-    CornerWearAnalyzer(),
-    SurfaceDefectAnalyzer(),
-  ];
+  static const List<CardAnalyzer> defaultAnalyzers = [CenteringAnalyzer(), EdgeWhiteningAnalyzer(), CornerWearAnalyzer(), SurfaceDefectAnalyzer()];
 
-  Future<PipelineRunResult> run(
-    AnalysisInput input, {
-    void Function(String step)? onProgress,
-  }) async {
+  Future<PipelineRunResult> run(AnalysisInput input, {void Function(String step)? onProgress}) async {
     final active = analyzers.where((a) => a.isEnabled).toList();
     final results = <AnalysisResult>[];
 

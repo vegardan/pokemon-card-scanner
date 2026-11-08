@@ -38,24 +38,16 @@ class CenteringAnalyzer implements CardAnalyzer {
     final frontMeasured = frontResult != null;
     final backMeasured = backResult != null;
 
-    final fLR = frontResult != null
-        ? frontResult.leftMm / (frontResult.leftMm + frontResult.rightMm)
-        : 0.50;
-    final fTB = frontResult != null
-        ? frontResult.topMm / (frontResult.topMm + frontResult.bottomMm)
-        : 0.50;
-    final bLR = backResult != null
-        ? backResult.leftMm / (backResult.leftMm + backResult.rightMm)
-        : 0.50;
-    final bTB = backResult != null
-        ? backResult.topMm / (backResult.topMm + backResult.bottomMm)
-        : 0.50;
+    final fLR = frontResult != null ? frontResult.leftMm / (frontResult.leftMm + frontResult.rightMm) : 0.50;
+    final fTB = frontResult != null ? frontResult.topMm / (frontResult.topMm + frontResult.bottomMm) : 0.50;
+    final bLR = backResult != null ? backResult.leftMm / (backResult.leftMm + backResult.rightMm) : 0.50;
+    final bTB = backResult != null ? backResult.topMm / (backResult.topMm + backResult.bottomMm) : 0.50;
 
     final confidence = (frontMeasured && backMeasured)
         ? 0.95
         : (frontMeasured || backMeasured)
-            ? 0.80
-            : 0.50;
+        ? 0.80
+        : 0.50;
 
     return CenteringAnalysisResult(
       analyzerId: id,

@@ -45,32 +45,15 @@ class CardDetailsPage extends StatelessWidget {
         final back = scannedCard?.backCentering;
         final centeringGrade = front == null || back == null
             ? null
-            : profile.centeringScore(
-                frontLeftRight: front.leftRight,
-                frontTopBottom: front.topBottom,
-                backLeftRight: back.leftRight,
-                backTopBottom: back.topBottom,
-              );
+            : profile.centeringScore(frontLeftRight: front.leftRight, frontTopBottom: front.topBottom, backLeftRight: back.leftRight, backTopBottom: back.topBottom);
 
         return Scaffold(
           appBar: AppBar(
             title: Text(title),
-            actions: [
-              if (scannedCard != null)
-                IconButton(
-                  tooltip: 'Delete card',
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: () => _deleteCard(context, scannedCard),
-                ),
-            ],
+            actions: [if (scannedCard != null) IconButton(tooltip: 'Delete card', icon: const Icon(Icons.delete_outline), onPressed: () => _deleteCard(context, scannedCard))],
           ),
           body: ListView(
-            padding: EdgeInsets.fromLTRB(
-              24,
-              16,
-              24,
-              40 + MediaQuery.paddingOf(context).bottom,
-            ),
+            padding: EdgeInsets.fromLTRB(24, 16, 24, 40 + MediaQuery.paddingOf(context).bottom),
             children: [
               Center(child: _CardImageCarousel(card: card)),
               const SizedBox(height: 24),
@@ -82,16 +65,8 @@ class CardDetailsPage extends StatelessWidget {
                   value: Align(
                     alignment: Alignment.centerLeft,
                     child: scannedCard.estimatedGrading != null
-                        ? GradeBadge(
-                            grade: scannedCard.estimatedGrading!,
-                            profileName: profile.shortName,
-                          )
-                        : (centeringGrade != null
-                            ? GradeBadge(
-                                grade: centeringGrade,
-                                profileName: profile.shortName,
-                              )
-                            : const Text('Not available')),
+                        ? GradeBadge(grade: scannedCard.estimatedGrading!, profileName: profile.shortName)
+                        : (centeringGrade != null ? GradeBadge(grade: centeringGrade, profileName: profile.shortName) : const Text('Not available')),
                   ),
                 ),
               _DetailRow(label: 'Set', value: Text(catalogCard.setName)),
@@ -99,19 +74,13 @@ class CardDetailsPage extends StatelessWidget {
               if (scannedCard != null) ...[
                 _DetailRow(
                   label: 'Scanned',
-                  value: Text(
-                    '${MaterialLocalizations.of(context).formatShortDate(scannedCard.createdAt.toLocal())} ${TimeOfDay.fromDateTime(scannedCard.createdAt.toLocal()).format(context)}',
-                  ),
+                  value: Text('${MaterialLocalizations.of(context).formatShortDate(scannedCard.createdAt.toLocal())} ${TimeOfDay.fromDateTime(scannedCard.createdAt.toLocal()).format(context)}'),
                 ),
                 const SizedBox(height: 16),
                 if (scannedCard.gradeReport != null || scannedCard.estimatedGrading != null) ...[
                   FilledButton.tonalIcon(
                     onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => GradeOverviewPage(card: scannedCard),
-                        ),
-                      );
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => GradeOverviewPage(card: scannedCard)));
                     },
                     icon: const Icon(Icons.analytics_outlined),
                     label: const Text('View grade overview'),
@@ -119,9 +88,7 @@ class CardDetailsPage extends StatelessWidget {
                   const SizedBox(height: 16),
                 ],
                 OutlinedButton.icon(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => CatalogCardDetailsPage(catalogCard)),
-                  ),
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogCardDetailsPage(catalogCard))),
                   icon: const Icon(Icons.collections_bookmark_outlined),
                   label: const Text('View in catalog'),
                 ),
@@ -178,23 +145,13 @@ class _CardImageCarousel extends StatelessWidget {
     }
 
     if (catalogCard.imageUrl != null) {
-      items.add(
-        ImageCarouselItem(
-          imageProvider: CachedNetworkImageProvider(catalogCard.imageUrl!),
-          semanticLabel: 'Catalog image of ${catalogCard.name}',
-        ),
-      );
+      items.add(ImageCarouselItem(imageProvider: CachedNetworkImageProvider(catalogCard.imageUrl!), semanticLabel: 'Catalog image of ${catalogCard.name}'));
     }
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 300),
       child: LayoutBuilder(
-        builder: (context, constraints) => ImageCarousel(
-          items: items,
-          height: constraints.maxWidth / CardConstants.cardAspectRatio,
-          fit: BoxFit.contain,
-          showLabels: true,
-        ),
+        builder: (context, constraints) => ImageCarousel(items: items, height: constraints.maxWidth / CardConstants.cardAspectRatio, fit: BoxFit.contain, showLabels: true),
       ),
     );
   }

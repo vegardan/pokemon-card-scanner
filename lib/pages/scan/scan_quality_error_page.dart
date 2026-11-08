@@ -15,34 +15,14 @@ class ScanQualityErrorPage extends StatelessWidget {
 
     final items = <ImageCarouselItem>[];
     if (result.isBlurry && result.hasGlare) {
-      items.add(
-        ImageCarouselItem(
-          imageProvider: MemoryImage(result.rawPhoto.bytes),
-          semanticLabel: 'Blurry photo',
-        ),
-      );
+      items.add(ImageCarouselItem(imageProvider: MemoryImage(result.rawPhoto.bytes), semanticLabel: 'Blurry photo'));
       if (result.annotatedGlarePhoto != null) {
-        items.add(
-          ImageCarouselItem(
-            imageProvider: MemoryImage(result.annotatedGlarePhoto!.bytes),
-            semanticLabel: 'Glare detected',
-          ),
-        );
+        items.add(ImageCarouselItem(imageProvider: MemoryImage(result.annotatedGlarePhoto!.bytes), semanticLabel: 'Glare detected'));
       }
     } else if (result.isBlurry) {
-      items.add(
-        ImageCarouselItem(
-          imageProvider: MemoryImage(result.rawPhoto.bytes),
-          semanticLabel: 'Blurry photo',
-        ),
-      );
+      items.add(ImageCarouselItem(imageProvider: MemoryImage(result.rawPhoto.bytes), semanticLabel: 'Blurry photo'));
     } else if (result.hasGlare && result.annotatedGlarePhoto != null) {
-      items.add(
-        ImageCarouselItem(
-          imageProvider: MemoryImage(result.annotatedGlarePhoto!.bytes),
-          semanticLabel: 'Glare detected',
-        ),
-      );
+      items.add(ImageCarouselItem(imageProvider: MemoryImage(result.annotatedGlarePhoto!.bytes), semanticLabel: 'Glare detected'));
     }
 
     return Scaffold(
@@ -56,28 +36,20 @@ class ScanQualityErrorPage extends StatelessWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: colors.errorContainer,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+                    decoration: BoxDecoration(color: colors.errorContainer, borderRadius: BorderRadius.circular(16)),
                     child: Column(
                       children: [
                         Icon(Icons.error_outline, size: 48, color: colors.onErrorContainer),
                         const SizedBox(height: 12),
                         Text(
                           result.title,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: colors.onErrorContainer,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: theme.textTheme.titleLarge?.copyWith(color: colors.onErrorContainer, fontWeight: FontWeight.bold),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 8),
                         Text(
                           result.description,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: colors.onErrorContainer,
-                          ),
+                          style: theme.textTheme.bodyMedium?.copyWith(color: colors.onErrorContainer),
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -89,12 +61,8 @@ class ScanQualityErrorPage extends StatelessWidget {
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 360),
                         child: LayoutBuilder(
-                          builder: (context, constraints) => ImageCarousel(
-                            items: items,
-                            height: constraints.maxWidth / CardConstants.cardAspectRatio,
-                            fit: BoxFit.contain,
-                            showLabels: items.length > 1,
-                          ),
+                          builder: (context, constraints) =>
+                              ImageCarousel(items: items, height: constraints.maxWidth / CardConstants.cardAspectRatio, fit: BoxFit.contain, showLabels: items.length > 1),
                         ),
                       ),
                     ),
@@ -105,11 +73,7 @@ class ScanQualityErrorPage extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
               child: SizedBox(
                 width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  icon: const Icon(Icons.camera_alt_outlined),
-                  label: const Text('Retake photo'),
-                ),
+                child: FilledButton.icon(onPressed: () => Navigator.of(context).pop(true), icon: const Icon(Icons.camera_alt_outlined), label: const Text('Retake photo')),
               ),
             ),
           ],

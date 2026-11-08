@@ -34,12 +34,7 @@ class SurfaceDefectAnalyzer implements CardAnalyzer {
         } else {
           final (okBack, encoded) = cv.imencode('.jpg', input.backImage);
           if (!okBack || encoded.isEmpty) {
-            return const SurfaceAnalysisResult(
-              analyzerId: 'surface_defect',
-              confidence: 0.80,
-              defectCount: 0,
-              defectAreaRatio: 0.0,
-            );
+            return const SurfaceAnalysisResult(analyzerId: 'surface_defect', confidence: 0.80, defectCount: 0, defectAreaRatio: 0.0);
           }
           backBytes = encoded;
         }
@@ -50,32 +45,15 @@ class SurfaceDefectAnalyzer implements CardAnalyzer {
           refBytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
         } catch (_) {}
 
-        result = await compute(CreaseAnalyzer.analyze, (
-          photo: backBytes,
-          reference: refBytes,
-          expectedNoise: null,
-          alignmentVerified: true,
-          minimumProminence: CreaseAnalyzer.minimumCandidateScore,
-        ));
+        result = await compute(CreaseAnalyzer.analyze, (photo: backBytes, reference: refBytes, expectedNoise: null, alignmentVerified: true, minimumProminence: CreaseAnalyzer.minimumCandidateScore));
       }
 
       final count = result.candidates.length;
       final ratio = count > 0 ? (count * 0.02).clamp(0.0, 1.0) : 0.0;
 
-      return SurfaceAnalysisResult(
-        analyzerId: id,
-        confidence: result.evaluated ? 0.90 : 0.70,
-        defectCount: count,
-        defectAreaRatio: ratio,
-        creaseAnalysis: result,
-      );
+      return SurfaceAnalysisResult(analyzerId: id, confidence: result.evaluated ? 0.90 : 0.70, defectCount: count, defectAreaRatio: ratio, creaseAnalysis: result);
     } catch (_) {
-      return const SurfaceAnalysisResult(
-        analyzerId: 'surface_defect',
-        confidence: 0.70,
-        defectCount: 0,
-        defectAreaRatio: 0.0,
-      );
+      return const SurfaceAnalysisResult(analyzerId: 'surface_defect', confidence: 0.70, defectCount: 0, defectAreaRatio: 0.0);
     }
   }
 }

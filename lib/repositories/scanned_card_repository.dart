@@ -57,9 +57,7 @@ class ScannedCardRepository {
       await db.execute('ALTER TABLE scanned_cards ADD COLUMN back_crease_analysis TEXT');
     }
 
-    final tables = await db.rawQuery(
-      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'card_centering'",
-    );
+    final tables = await db.rawQuery("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'card_centering'");
     if (tables.isEmpty) {
       await CenteringTable.create(db);
     }
@@ -109,43 +107,24 @@ class ScannedCardRepository {
             final details = Map<String, dynamic>.from(sub.details ?? {});
             if (frontCornersPath != null) details['frontAnnotatedPath'] = frontCornersPath;
             if (backCornersPath != null) details['backAnnotatedPath'] = backCornersPath;
-            return SubGrade(
-              category: sub.category,
-              score: sub.score,
-              description: sub.description,
-              details: details,
-            );
+            return SubGrade(category: sub.category, score: sub.score, description: sub.description, details: details);
           }
           return sub;
         }).toList();
 
-        finalGrade = EstimatedGrade(
-          overallScore: finalGrade.overallScore,
-          strategyName: finalGrade.strategyName,
-          subGrades: updatedSubGrades,
-          notes: finalGrade.notes,
-        );
+        finalGrade = EstimatedGrade(overallScore: finalGrade.overallScore, strategyName: finalGrade.strategyName, subGrades: updatedSubGrades, notes: finalGrade.notes);
       }
 
       final gradeReportJson = finalGrade != null ? jsonEncode(finalGrade.toJson()) : null;
 
       await transaction.update(
         'scanned_cards',
-        {
-          'front_image_path': frontImagePath,
-          'back_image_path': backImagePath,
-          'grade_report_json': gradeReportJson,
-        },
+        {'front_image_path': frontImagePath, 'back_image_path': backImagePath, 'grade_report_json': gradeReportJson},
         where: 'scan_id = ?',
         whereArgs: [scanId],
       );
 
-      return (
-        scanId: scanId,
-        frontImagePath: frontImagePath,
-        backImagePath: backImagePath,
-        finalGrade: finalGrade,
-      );
+      return (scanId: scanId, frontImagePath: frontImagePath, backImagePath: backImagePath, finalGrade: finalGrade);
     });
 
     return ScannedPokemonCard(
@@ -208,14 +187,8 @@ class ScannedCardRepository {
     final db = await _database;
     await db.delete('scanned_cards', where: 'scan_id = ?', whereArgs: [card.scanId]);
 
-    final cornerDetails = card.gradeReport?.subGrades
-        .where((s) => s.category == 'Corners')
-        .firstOrNull
-        ?.details;
-    final extraPaths = [
-      cornerDetails?['frontAnnotatedPath'] as String?,
-      cornerDetails?['backAnnotatedPath'] as String?,
-    ];
+    final cornerDetails = card.gradeReport?.subGrades.where((s) => s.category == 'Corners').firstOrNull?.details;
+    final extraPaths = [cornerDetails?['frontAnnotatedPath'] as String?, cornerDetails?['backAnnotatedPath'] as String?];
 
     for (final imagePath in [card.frontImagePath, card.backImagePath, ...extraPaths]) {
       if (imagePath == null) continue;

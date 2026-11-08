@@ -78,13 +78,9 @@ class _CardGradingPageState extends State<CardGradingPage> {
 
       if (!mounted || _finished) return;
 
-      final cornerResult = runResult.results
-          .whereType<CornerAnalysisResult>()
-          .firstOrNull;
+      final cornerResult = runResult.results.whereType<CornerAnalysisResult>().firstOrNull;
 
-      final centeringResult = runResult.results
-          .whereType<CenteringAnalysisResult>()
-          .firstOrNull;
+      final centeringResult = runResult.results.whereType<CenteringAnalysisResult>().firstOrNull;
 
       final savedCard = await ScannedCardRepository.instance.save(
         widget.frontPhoto,
@@ -159,48 +155,27 @@ class _CardGradingPageState extends State<CardGradingPage> {
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          Positioned.fill(
-                            child: CircularProgressIndicator(
-                              value: _fraction > 0 ? _fraction : null,
-                              strokeWidth: 3,
-                            ),
-                          ),
-                          Icon(
-                            Icons.auto_awesome,
-                            size: 36,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
+                          Positioned.fill(child: CircularProgressIndicator(value: _fraction > 0 ? _fraction : null, strokeWidth: 3)),
+                          Icon(Icons.auto_awesome, size: 36, color: Theme.of(context).colorScheme.primary),
                         ],
                       ),
                     ),
                     const SizedBox(height: 28),
-                    Text(
-                      'Estimating grade',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                      textAlign: TextAlign.center,
-                    ),
+                    Text('Estimating grade', style: Theme.of(context).textTheme.headlineSmall, textAlign: TextAlign.center),
                     const SizedBox(height: 12),
                     Text(
                       'Analyzing centering, edges, corners, and surface condition.',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 16),
                     Text(
                       _status,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 28),
-                    OutlinedButton.icon(
-                      onPressed: _stop,
-                      icon: const Icon(Icons.stop),
-                      label: const Text('Stop'),
-                    ),
+                    OutlinedButton.icon(onPressed: _stop, icon: const Icon(Icons.stop), label: const Text('Stop')),
                   ],
                 ),
               ),

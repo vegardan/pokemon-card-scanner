@@ -2,27 +2,19 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:opencv_dart/opencv_dart.dart' as cv;
-
 import 'package:pokemon_card_scanner/models/crease_analysis.dart';
+
 export 'package:pokemon_card_scanner/models/crease_analysis.dart';
 
 /// Transient preview plus the metadata returned to the scan and collection.
 class CreaseResult extends CreaseAnalysis {
   final Uint8List? preview;
 
-  CreaseResult({
-    required this.preview,
-    required super.width,
-    required super.height,
-    required super.candidates,
-  });
-  const CreaseResult.notEvaluated(super.reason)
-    : preview = null,
-      super.notEvaluated();
+  CreaseResult({required this.preview, required super.width, required super.height, required super.candidates});
 
-  CreaseAnalysis get analysis => evaluated
-      ? CreaseAnalysis(width: width, height: height, candidates: candidates)
-      : CreaseAnalysis.notEvaluated(notEvaluatedReason!);
+  const CreaseResult.notEvaluated(super.reason) : preview = null, super.notEvaluated();
+
+  CreaseAnalysis get analysis => evaluated ? CreaseAnalysis(width: width, height: height, candidates: candidates) : CreaseAnalysis.notEvaluated(notEvaluatedReason!);
 }
 
 class CreaseAnalyzer {
@@ -54,20 +46,9 @@ class CreaseAnalyzer {
   static const _groupAngle = 10.0, _groupDistance = 25.0;
 
   /// Analyze a verified, perspective-corrected card back without changing it.
-  static CreaseResult analyze(
-    ({
-      Uint8List photo,
-      Uint8List? reference,
-      bool alignmentVerified,
-      double minimumProminence,
-      Float32List? expectedNoise,
-    })
-    input,
-  ) {
+  static CreaseResult analyze(({Uint8List photo, Uint8List? reference, bool alignmentVerified, double minimumProminence, Float32List? expectedNoise}) input) {
     if (!input.alignmentVerified) {
-      return const CreaseResult.notEvaluated(
-        'Card alignment was not verified.',
-      );
+      return const CreaseResult.notEvaluated('Card alignment was not verified.');
     }
     if (input.reference == null || input.reference!.isEmpty) {
       return const CreaseResult.notEvaluated('Reference image unavailable.');
@@ -94,61 +75,35 @@ class CreaseAnalyzer {
       const width = _imageWidth;
       final height = (ref.rows * width / ref.cols).round();
       if (height < 121) {
-        return const CreaseResult.notEvaluated(
-          'Reference has an unsupported aspect ratio.',
-        );
+        return const CreaseResult.notEvaluated('Reference has an unsupported aspect ratio.');
       }
-      final reference = keep(
-        cv.resize(ref, (width, height), interpolation: cv.INTER_AREA),
-      );
-      final corrected = keep(
-        cv.resize(photo, (width, height), interpolation: cv.INTER_AREA),
-      );
+      final reference = keep(cv.resize(ref, (width, height), interpolation: cv.INTER_AREA));
+      final corrected = keep(cv.resize(photo, (width, height), interpolation: cv.INTER_AREA));
       // Gradients emphasize structural differences rather than absolute brightness.
       final referenceGradient = _gradient(reference, keep);
       final photoGradient = _gradient(corrected, keep);
       final excluded = _referenceMask(referenceGradient, width, height, keep);
-      final difference = keep(
-        cv.absDiff(photoGradient.magnitude, referenceGradient.magnitude),
-      );
+      final difference = keep(cv.absDiff(photoGradient.magnitude, referenceGradient.magnitude));
       // Custom heuristic: remove residuals explainable by small reference shifts.
       final noise = input.expectedNoise ?? referenceNoise(input.reference!);
       if (noise.length != width * height) {
         throw ArgumentError('Reference noise dimensions');
       }
       final bytesView = difference.data;
-      final residual = bytesView.buffer.asFloat32List(
-        bytesView.offsetInBytes,
-        width * height,
-      );
+      final residual = bytesView.buffer.asFloat32List(bytesView.offsetInBytes, width * height);
       for (var i = 0; i < residual.length; i++) {
         residual[i] = math.max(0, residual[i] - noise[i]);
       }
       difference.setTo(black, mask: excluded);
       final valid = keep(cv.bitwiseNOT(excluded));
-      final candidates = rotatedProfiles(
-        difference,
-        valid,
-        width,
-        height,
-        input.minimumProminence,
-      );
+      final candidates = rotatedProfiles(difference, valid, width, height, input.minimumProminence);
       final (success, bytes) = cv.imencode('.png', corrected);
       if (!success) {
-        return const CreaseResult.notEvaluated(
-          'Could not prepare crease preview.',
-        );
+        return const CreaseResult.notEvaluated('Could not prepare crease preview.');
       }
-      return CreaseResult(
-        preview: bytes,
-        width: width,
-        height: height,
-        candidates: candidates,
-      );
+      return CreaseResult(preview: bytes, width: width, height: height, candidates: candidates);
     } catch (_) {
-      return const CreaseResult.notEvaluated(
-        'Image analysis could not be completed.',
-      );
+      return const CreaseResult.notEvaluated('Image analysis could not be completed.');
     } finally {
       black.dispose();
       for (final mat in allocated.reversed) {
@@ -157,10 +112,7 @@ class CreaseAnalyzer {
     }
   }
 
-  static ({cv.Mat magnitude, cv.Mat x, cv.Mat y}) _gradient(
-    cv.Mat gray,
-    cv.Mat Function(cv.Mat) keep,
-  ) {
+  static ({cv.Mat magnitude, cv.Mat x, cv.Mat y}) _gradient(cv.Mat gray, cv.Mat Function(cv.Mat) keep) {
     final blur = keep(cv.gaussianBlur(gray, (_blurSize, _blurSize), 0));
     final gx = keep(cv.sobel(blur, cv.MatType.CV_32F, 1, 0, ksize: _sobelSize));
     final gy = keep(cv.sobel(blur, cv.MatType.CV_32F, 0, 1, ksize: _sobelSize));
@@ -168,32 +120,16 @@ class CreaseAnalyzer {
   }
 
   // Suppress printed contours that otherwise dominate the projection profiles.
-  static cv.Mat _referenceMask(
-    ({cv.Mat magnitude, cv.Mat x, cv.Mat y}) gradient,
-    int width,
-    int height,
-    cv.Mat Function(cv.Mat) keep,
-  ) {
+  static cv.Mat _referenceMask(({cv.Mat magnitude, cv.Mat x, cv.Mat y}) gradient, int width, int height, cv.Mat Function(cv.Mat) keep) {
     final white = cv.Scalar(255);
     try {
-      final (_, threshold) = cv.threshold(
-        gradient.magnitude,
-        _referenceEdgeThreshold,
-        255,
-        cv.THRESH_BINARY,
-      );
+      final (_, threshold) = cv.threshold(gradient.magnitude, _referenceEdgeThreshold, 255, cv.THRESH_BINARY);
       keep(threshold);
       final edges = keep(threshold.convertTo(cv.MatType.CV_8UC1));
-      final kernel = keep(
-        cv.getStructuringElement(cv.MORPH_RECT, (
-          _maskKernelSize,
-          _maskKernelSize,
-        )),
-      );
+      final kernel = keep(cv.getStructuringElement(cv.MORPH_RECT, (_maskKernelSize, _maskKernelSize)));
       final excluded = keep(cv.dilate(edges, kernel));
       final emptyMask = keep(cv.Mat.empty());
-      final mx = (width * _borderFraction).round(),
-          my = (height * _borderFraction).round();
+      final mx = (width * _borderFraction).round(), my = (height * _borderFraction).round();
       void border(int x, int y, int w, int h) {
         final rect = cv.Rect(x, y, w, h);
         cv.Mat? region;
@@ -212,43 +148,24 @@ class CreaseAnalyzer {
       border(width - mx, 0, mx, height);
       // Exclude expected frame edges and their surrounding registration margin.
       for (final horizontal in [true, false]) {
-        final absolute = keep(
-          cv.convertScaleAbs(horizontal ? gradient.y : gradient.x),
-        );
-        final (_, binary) = cv.threshold(
-          absolute,
-          _frameGradientThreshold,
-          255,
-          cv.THRESH_BINARY,
-        );
+        final absolute = keep(cv.convertScaleAbs(horizontal ? gradient.y : gradient.x));
+        final (_, binary) = cv.threshold(absolute, _frameGradientThreshold, 255, cv.THRESH_BINARY);
         keep(binary);
-        final rect = horizontal
-            ? cv.Rect(mx, 0, width - 2 * mx, height)
-            : cv.Rect(0, my, width, height - 2 * my);
+        final rect = horizontal ? cv.Rect(mx, 0, width - 2 * mx, height) : cv.Rect(0, my, width, height - 2 * my);
         cv.Mat? region;
         try {
           region = binary.region(rect);
-          final coverage = keep(
-            cv.reduce(
-              region,
-              horizontal ? 1 : 0,
-              cv.REDUCE_SUM,
-              dtype: cv.MatType.CV_32S,
-            ),
-          );
+          final coverage = keep(cv.reduce(region, horizontal ? 1 : 0, cv.REDUCE_SUM, dtype: cv.MatType.CV_32S));
           final length = horizontal ? height : width;
           final span = horizontal ? width - 2 * mx : height - 2 * my;
           for (var i = 0; i < length; i++) {
-            if (i >= length * _frameSearchFraction &&
-                i < length * (1 - _frameSearchFraction)) {
+            if (i >= length * _frameSearchFraction && i < length * (1 - _frameSearchFraction)) {
               continue;
             }
-            if (coverage.at<int>(horizontal ? i : 0, horizontal ? 0 : i) <
-                255 * span * _frameCoverage) {
+            if (coverage.at<int>(horizontal ? i : 0, horizontal ? 0 : i) < 255 * span * _frameCoverage) {
               continue;
             }
-            final start = math.max(0, i - _frameGuard),
-                end = math.min(length, i + _frameGuard + 1);
+            final start = math.max(0, i - _frameGuard), end = math.min(length, i + _frameGuard + 1);
             if (horizontal) {
               border(0, start, width, end - start);
             } else {
@@ -291,43 +208,23 @@ class CreaseAnalyzer {
     try {
       if (decoded.isEmpty) throw ArgumentError('Invalid reference');
       final height = (decoded.rows * _imageWidth / decoded.cols).round();
-      reference = cv.resize(decoded, (
-        _imageWidth,
-        height,
-      ), interpolation: cv.INTER_AREA);
+      reference = cv.resize(decoded, (_imageWidth, height), interpolation: cv.INTER_AREA);
       baseline = magnitude(reference);
       final baseBytes = baseline.data;
-      final base = baseBytes.buffer.asFloat32List(
-        baseBytes.offsetInBytes,
-        _imageWidth * height,
-      );
+      final base = baseBytes.buffer.asFloat32List(baseBytes.offsetInBytes, _imageWidth * height);
       final noise = Float32List(base.length);
       for (var dy = -_noiseRadius; dy <= _noiseRadius; dy++) {
         for (var dx = -_noiseRadius; dx <= _noiseRadius; dx++) {
-          if (dx * dx + dy * dy == 0 ||
-              dx * dx + dy * dy > _noiseRadius * _noiseRadius) {
+          if (dx * dx + dy * dy == 0 || dx * dx + dy * dy > _noiseRadius * _noiseRadius) {
             continue;
           }
-          final transform = cv.Mat.fromList(2, 3, cv.MatType.CV_32FC1, [
-            1.0,
-            0.0,
-            dx.toDouble(),
-            0.0,
-            1.0,
-            dy.toDouble(),
-          ]);
+          final transform = cv.Mat.fromList(2, 3, cv.MatType.CV_32FC1, [1.0, 0.0, dx.toDouble(), 0.0, 1.0, dy.toDouble()]);
           cv.Mat? shifted, gradient;
           try {
-            shifted = cv.warpAffine(reference, transform, (
-              _imageWidth,
-              height,
-            ), borderMode: cv.BORDER_REFLECT_101);
+            shifted = cv.warpAffine(reference, transform, (_imageWidth, height), borderMode: cv.BORDER_REFLECT_101);
             gradient = magnitude(shifted);
             final data = gradient.data;
-            final values = data.buffer.asFloat32List(
-              data.offsetInBytes,
-              base.length,
-            );
+            final values = data.buffer.asFloat32List(data.offsetInBytes, base.length);
             for (var i = 0; i < base.length; i++) {
               noise[i] = math.max(noise[i], (values[i] - base[i]).abs());
             }
@@ -347,27 +244,11 @@ class CreaseAnalyzer {
   }
 
   /// Gaussian smoothing reduces noise; a local median removes broad background variation.
-  static List<double> profileProminence(
-    List<double> scores,
-    List<int> validCounts, {
-    required int start,
-    required int end,
-  }) {
-    if (scores.length != validCounts.length ||
-        scores.length < 2 * _smoothRadius + 1 ||
-        start < 0 ||
-        end > scores.length ||
-        start >= end) {
+  static List<double> profileProminence(List<double> scores, List<int> validCounts, {required int start, required int end}) {
+    if (scores.length != validCounts.length || scores.length < 2 * _smoothRadius + 1 || start < 0 || end > scores.length || start >= end) {
       throw ArgumentError('Invalid profile dimensions/search range');
     }
-    final weights = List<double>.generate(
-      2 * _smoothRadius + 1,
-      (i) => math.exp(
-        -(i - _smoothRadius) *
-            (i - _smoothRadius) /
-            (2 * _smoothSigma * _smoothSigma),
-      ),
-    );
+    final weights = List<double>.generate(2 * _smoothRadius + 1, (i) => math.exp(-(i - _smoothRadius) * (i - _smoothRadius) / (2 * _smoothSigma * _smoothSigma)));
     int reflect(int i) => i < 0
         ? -i
         : i >= scores.length
@@ -391,9 +272,7 @@ class CreaseAnalyzer {
       if (weight == 0 || background.isEmpty) continue;
       background.sort();
       final middle = background.length ~/ 2;
-      final median = background.length.isOdd
-          ? background[middle]
-          : (background[middle - 1] + background[middle]) / 2;
+      final median = background.length.isOdd ? background[middle] : (background[middle - 1] + background[middle]) / 2;
       final prominence = smooth / weight - median;
       values[i] = prominence;
     }
@@ -401,13 +280,7 @@ class CreaseAnalyzer {
   }
 
   /// Rotation covers different directions; sections reduce dilution of short signals.
-  static List<PossibleCrease> rotatedProfiles(
-    cv.Mat difference,
-    cv.Mat valid,
-    int width,
-    int height,
-    double cutoff,
-  ) {
+  static List<PossibleCrease> rotatedProfiles(cv.Mat difference, cv.Mat valid, int width, int height, double cutoff) {
     final mask = valid.convertTo(cv.MatType.CV_32FC1, alpha: 1 / 255);
     try {
       final proposals = <PossibleCrease>[];
@@ -422,85 +295,41 @@ class CreaseAnalyzer {
   }
 
   // Rotate the signal and validity mask together, keeping the complete card.
-  static List<List<_SectionPeak>> _sectionPeaks(
-    cv.Mat difference,
-    cv.Mat mask,
-    int width,
-    int height,
-    int angle,
-  ) {
-    final cosine = math.cos(angle * math.pi / 180),
-        sine = math.sin(angle * math.pi / 180);
+  static List<List<_SectionPeak>> _sectionPeaks(cv.Mat difference, cv.Mat mask, int width, int height, int angle) {
+    final cosine = math.cos(angle * math.pi / 180), sine = math.sin(angle * math.pi / 180);
     final center = cv.Point2f(width / 2, height / 2);
     final transform = cv.getRotationMatrix2D(center, angle.toDouble(), 1);
     center.dispose();
     cv.Mat? weights, numerator;
     try {
       final tx = transform.at<double>(0, 2), ty = transform.at<double>(1, 2);
-      final xs = [
-        tx,
-        cosine * width + tx,
-        sine * height + tx,
-        cosine * width + sine * height + tx,
-      ];
-      final ys = [
-        ty,
-        -sine * width + ty,
-        cosine * height + ty,
-        -sine * width + cosine * height + ty,
-      ];
-      final left = xs.reduce(math.min).floor(),
-          top = ys.reduce(math.min).floor();
-      final rotatedWidth = xs.reduce(math.max).ceil() - left,
-          rotatedHeight = ys.reduce(math.max).ceil() - top;
+      final xs = [tx, cosine * width + tx, sine * height + tx, cosine * width + sine * height + tx];
+      final ys = [ty, -sine * width + ty, cosine * height + ty, -sine * width + cosine * height + ty];
+      final left = xs.reduce(math.min).floor(), top = ys.reduce(math.min).floor();
+      final rotatedWidth = xs.reduce(math.max).ceil() - left, rotatedHeight = ys.reduce(math.max).ceil() - top;
       final offsetX = tx - left, offsetY = ty - top;
       transform.set<double>(0, 2, offsetX);
       transform.set<double>(1, 2, offsetY);
       weights = cv.warpAffine(mask, transform, (rotatedWidth, rotatedHeight));
-      numerator = cv.warpAffine(difference, transform, (
-        rotatedWidth,
-        rotatedHeight,
-      ));
+      numerator = cv.warpAffine(difference, transform, (rotatedWidth, rotatedHeight));
       final maskBytes = weights.data, signalBytes = numerator.data;
-      final maskValues = maskBytes.buffer.asFloat32List(
-            maskBytes.offsetInBytes,
-            rotatedWidth * rotatedHeight,
-          ),
-          signalValues = signalBytes.buffer.asFloat32List(
-            signalBytes.offsetInBytes,
-            rotatedWidth * rotatedHeight,
-          );
-      final counts = List.generate(
-        _sectionCount,
-        (_) => List<int>.filled(rotatedHeight, 0),
-      );
-      final scores = List.generate(
-        _sectionCount,
-        (_) => List<double>.filled(rotatedHeight, 0),
-      );
-      final meanX = List.generate(
-        _sectionCount,
-        (_) => List<double>.filled(rotatedHeight, 0),
-      );
+      final maskValues = maskBytes.buffer.asFloat32List(maskBytes.offsetInBytes, rotatedWidth * rotatedHeight),
+          signalValues = signalBytes.buffer.asFloat32List(signalBytes.offsetInBytes, rotatedWidth * rotatedHeight);
+      final counts = List.generate(_sectionCount, (_) => List<int>.filled(rotatedHeight, 0));
+      final scores = List.generate(_sectionCount, (_) => List<double>.filled(rotatedHeight, 0));
+      final meanX = List.generate(_sectionCount, (_) => List<double>.filled(rotatedHeight, 0));
       for (var y = 0; y < rotatedHeight; y++) {
         var firstValid = 0, lastValid = rotatedWidth - 1;
-        while (firstValid < rotatedWidth &&
-            maskValues[y * rotatedWidth + firstValid] <= _validWeight) {
+        while (firstValid < rotatedWidth && maskValues[y * rotatedWidth + firstValid] <= _validWeight) {
           firstValid++;
         }
-        while (lastValid >= firstValid &&
-            maskValues[y * rotatedWidth + lastValid] <= _validWeight) {
+        while (lastValid >= firstValid && maskValues[y * rotatedWidth + lastValid] <= _validWeight) {
           lastValid--;
         }
         if (lastValid < firstValid) continue;
         for (var tile = 0; tile < _sectionCount; tile++) {
-          final begin =
-              firstValid +
-              ((lastValid - firstValid + 1) * tile / _sectionCount).floor();
-          final end =
-              firstValid +
-              ((lastValid - firstValid + 1) * (tile + 1) / _sectionCount)
-                  .floor();
+          final begin = firstValid + ((lastValid - firstValid + 1) * tile / _sectionCount).floor();
+          final end = firstValid + ((lastValid - firstValid + 1) * (tile + 1) / _sectionCount).floor();
           var total = 0.0, sumX = 0.0, count = 0;
           for (var x = begin; x < end; x++) {
             if (maskValues[y * rotatedWidth + x] > _validWeight) {
@@ -518,22 +347,11 @@ class CreaseAnalyzer {
       }
       final sections = <List<_SectionPeak>>[];
       for (var tile = 0; tile < _sectionCount; tile++) {
-        final prominence = profileProminence(
-          scores[tile],
-          counts[tile],
-          start: 0,
-          end: rotatedHeight,
-        );
+        final prominence = profileProminence(scores[tile], counts[tile], start: 0, end: rotatedHeight);
         final selected = _selectPeaks(prominence, counts[tile]);
         sections.add([
           for (final y in selected)
-            (
-              tile: tile,
-              score: prominence[y],
-              rho: y - offsetY,
-              x: cosine * (meanX[tile][y] - offsetX) - sine * (y - offsetY),
-              y: sine * (meanX[tile][y] - offsetX) + cosine * (y - offsetY),
-            ),
+            (tile: tile, score: prominence[y], rho: y - offsetY, x: cosine * (meanX[tile][y] - offsetX) - sine * (y - offsetY), y: sine * (meanX[tile][y] - offsetX) + cosine * (y - offsetY)),
         ]);
       }
       return sections;
@@ -551,9 +369,7 @@ class CreaseAnalyzer {
       while (j + 1 < prominence.length && prominence[j + 1] == prominence[i]) {
         j++;
       }
-      if (j < prominence.length - 1 &&
-          prominence[i] > prominence[i - 1] &&
-          prominence[j] > prominence[j + 1]) {
+      if (j < prominence.length - 1 && prominence[i] > prominence[i - 1] && prominence[j] > prominence[j + 1]) {
         peaks.add((i + j) ~/ 2);
       }
       i = j + 1;
@@ -568,21 +384,11 @@ class CreaseAnalyzer {
         spaced.add(y);
       }
     }
-    return spaced
-        .where(
-          (y) =>
-              counts[y] >= _minimumSectionPixels &&
-              prominence[y] >= _minimumSectionProminence,
-        )
-        .take(_maxSectionPeaks);
+    return spaced.where((y) => counts[y] >= _minimumSectionPixels && prominence[y] >= _minimumSectionProminence).take(_maxSectionPeaks);
   }
 
   // Require section peaks to follow a common line before pruning competing tracks.
-  static List<PossibleCrease> _linkSections(
-    List<List<_SectionPeak>> sections,
-    int width,
-    int height,
-  ) {
+  static List<PossibleCrease> _linkSections(List<List<_SectionPeak>> sections, int width, int height) {
     final result = <PossibleCrease>[];
     final tracks = <({double score, double rho, PossibleCrease line})>[];
     void walk(List<_SectionPeak> path) {
@@ -590,21 +396,13 @@ class CreaseAnalyzer {
         final score = _median(path.map((p) => p.score).toList());
         final line = _fit(path, width, height, score);
         if (line != null) {
-          tracks.add((
-            score: score,
-            rho: _median(path.map((p) => p.rho).toList()),
-            line: line,
-          ));
+          tracks.add((score: score, rho: _median(path.map((p) => p.rho).toList()), line: line));
         }
       }
-      for (final tile in [
-        path.last.tile + 1,
-        path.last.tile + _maxSectionGap,
-      ]) {
+      for (final tile in [path.last.tile + 1, path.last.tile + _maxSectionGap]) {
         if (tile >= _sectionCount) continue;
         for (final peak in sections[tile]) {
-          if ((peak.rho - path.last.rho).abs() <=
-              _maxRowStep * (tile - path.last.tile)) {
+          if ((peak.rho - path.last.rho).abs() <= _maxRowStep * (tile - path.last.tile)) {
             walk([...path, peak]);
           }
         }
@@ -636,10 +434,7 @@ class CreaseAnalyzer {
   }
 
   // Compare both midpoint-to-line distances, including angles near 0/180 degrees.
-  static List<PossibleCrease> _groupCandidates(
-    List<PossibleCrease> proposals,
-    double cutoff,
-  ) {
+  static List<PossibleCrease> _groupCandidates(List<PossibleCrease> proposals, double cutoff) {
     final ordered = proposals.indexed.toList()
       ..sort((a, b) {
         final order = b.$2.prominence.compareTo(a.$2.prominence);
@@ -653,14 +448,10 @@ class CreaseAnalyzer {
         if (math.min(delta, 180 - delta) > _groupAngle) return false;
         double distance(PossibleCrease a, PossibleCrease b) {
           final t = b.angle * math.pi / 180;
-          return (-math.sin(t) * (a.x1 + a.x2) / 2 +
-                  math.cos(t) * (a.y1 + a.y2) / 2 -
-                  b.rho)
-              .abs();
+          return (-math.sin(t) * (a.x1 + a.x2) / 2 + math.cos(t) * (a.y1 + a.y2) / 2 - b.rho).abs();
         }
 
-        return math.max(distance(line, other), distance(other, line)) <=
-            _groupDistance;
+        return math.max(distance(line, other), distance(other, line)) <= _groupDistance;
       });
       if (line.prominence < cutoff || duplicate) continue;
       kept.add(line);
@@ -677,12 +468,7 @@ class CreaseAnalyzer {
   static double _roundTenth(double value) => (value * 10).roundToDouble() / 10;
 
   // Fit an orthogonal least-squares line through the section points.
-  static PossibleCrease? _fit(
-    List<_SectionPeak> path,
-    int width,
-    int height,
-    double score,
-  ) {
+  static PossibleCrease? _fit(List<_SectionPeak> path, int width, int height, double score) {
     final centroidX = path.fold(0.0, (sum, p) => sum + p.x) / path.length;
     final centroidY = path.fold(0.0, (sum, p) => sum + p.y) / path.length;
     var covarianceXX = 0.0, covarianceXY = 0.0, covarianceYY = 0.0;
@@ -691,26 +477,16 @@ class CreaseAnalyzer {
       covarianceXY += (p.x - centroidX) * (p.y - centroidY);
       covarianceYY += (p.y - centroidY) * (p.y - centroidY);
     }
-    final angle =
-        (.5 *
-            math.atan2(2 * covarianceXY, covarianceXX - covarianceYY) *
-            180 /
-            math.pi) %
-        180;
-    final s = math.sin(angle * math.pi / 180),
-        c = math.cos(angle * math.pi / 180);
+    final angle = (.5 * math.atan2(2 * covarianceXY, covarianceXX - covarianceYY) * 180 / math.pi) % 180;
+    final s = math.sin(angle * math.pi / 180), c = math.cos(angle * math.pi / 180);
     final rho = -s * centroidX + c * centroidY;
     if (path.any((p) => (-s * p.x + c * p.y - rho).abs() > _maxFitError)) {
       return null;
     }
     final points = <(double, double)>[];
-    final bx = (width * _borderFraction).round().toDouble(),
-        by = (height * _borderFraction).round().toDouble();
+    final bx = (width * _borderFraction).round().toDouble(), by = (height * _borderFraction).round().toDouble();
     void add(double x, double y) {
-      if (x >= bx - .001 &&
-          x <= width - bx + .001 &&
-          y >= by - .001 &&
-          y <= height - by + .001) {
+      if (x >= bx - .001 && x <= width - bx + .001 && y >= by - .001 && y <= height - by + .001) {
         points.add((x, y));
       }
     }
@@ -737,22 +513,8 @@ class CreaseAnalyzer {
         }
       }
     }
-    return (
-      angle: angle,
-      rho: rho,
-      x1: a.$1,
-      y1: a.$2,
-      x2: b.$1,
-      y2: b.$2,
-      prominence: _roundTenth(score),
-    );
+    return (angle: angle, rho: rho, x1: a.$1, y1: a.$2, x2: b.$1, y2: b.$2, prominence: _roundTenth(score));
   }
 }
 
-typedef _SectionPeak = ({
-  int tile,
-  double score,
-  double rho,
-  double x,
-  double y,
-});
+typedef _SectionPeak = ({int tile, double score, double rho, double x, double y});

@@ -12,8 +12,7 @@ class DefaultGradeEstimatorStrategy implements GradeEstimatorStrategy {
 
   const DefaultGradeEstimatorStrategy({this.profile});
 
-  GradingProfile get _activeProfile =>
-      profile ?? GradingProfileController.instance.value;
+  GradingProfile get _activeProfile => profile ?? GradingProfileController.instance.value;
 
   @override
   String get name => 'Default';
@@ -32,10 +31,7 @@ class DefaultGradeEstimatorStrategy implements GradeEstimatorStrategy {
               category: 'Edges',
               score: 0.0,
               description: 'Edge wear analysis has not been implemented yet',
-              details: {
-                'unimplemented': true,
-                'note': 'Edge wear analysis has not been implemented yet.',
-              },
+              details: {'unimplemented': true, 'note': 'Edge wear analysis has not been implemented yet.'},
             ),
           );
         case CornerAnalysisResult k:
@@ -55,16 +51,7 @@ class DefaultGradeEstimatorStrategy implements GradeEstimatorStrategy {
             description = 'Clean corners';
           }
 
-          subGrades.add(
-            SubGrade(
-              category: 'Corners',
-              score: score,
-              description: description,
-              details: {
-                'backCorners': k.backCorners.map((c) => c.toJson()).toList(),
-              },
-            ),
-          );
+          subGrades.add(SubGrade(category: 'Corners', score: score, description: description, details: {'backCorners': k.backCorners.map((c) => c.toJson()).toList()}));
         case SurfaceAnalysisResult s:
           final double score;
           final String description;
@@ -82,49 +69,25 @@ class DefaultGradeEstimatorStrategy implements GradeEstimatorStrategy {
               category: 'Creases',
               score: score,
               description: description,
-              details: {
-                'defectCount': s.defectCount,
-                'defectAreaRatio': s.defectAreaRatio,
-                if (s.creaseAnalysis != null)
-                  'creaseStatus': s.creaseAnalysis!.status.name,
-              },
+              details: {'defectCount': s.defectCount, 'defectAreaRatio': s.defectAreaRatio, if (s.creaseAnalysis != null) 'creaseStatus': s.creaseAnalysis!.status.name},
             ),
           );
       }
     }
 
-    final scorable = subGrades
-        .where((s) =>
-            s.details?['unmeasured'] != true &&
-            s.details?['unimplemented'] != true &&
-            s.score > 0)
-        .toList();
+    final scorable = subGrades.where((s) => s.details?['unmeasured'] != true && s.details?['unimplemented'] != true && s.score > 0).toList();
 
-    final average = scorable.isEmpty
-        ? 10.0
-        : scorable.map((s) => s.score).reduce((a, b) => a + b) / scorable.length;
+    final average = scorable.isEmpty ? 10.0 : scorable.map((s) => s.score).reduce((a, b) => a + b) / scorable.length;
 
-    return EstimatedGrade(
-      overallScore: average.round().clamp(1, 10),
-      strategyName: name,
-      subGrades: subGrades,
-    );
+    return EstimatedGrade(overallScore: average.round().clamp(1, 10), strategyName: name, subGrades: subGrades);
   }
 
   SubGrade _estimateCentering(CenteringAnalysisResult c) {
-    final fLR = c.frontResult != null
-        ? c.frontResult!.leftRight
-        : (math.max(c.frontLeftRightRatio, 1.0 - c.frontLeftRightRatio) * 100);
-    final fTB = c.frontResult != null
-        ? c.frontResult!.topBottom
-        : (math.max(c.frontTopBottomRatio, 1.0 - c.frontTopBottomRatio) * 100);
+    final fLR = c.frontResult != null ? c.frontResult!.leftRight : (math.max(c.frontLeftRightRatio, 1.0 - c.frontLeftRightRatio) * 100);
+    final fTB = c.frontResult != null ? c.frontResult!.topBottom : (math.max(c.frontTopBottomRatio, 1.0 - c.frontTopBottomRatio) * 100);
 
-    final bLR = c.backResult != null
-        ? c.backResult!.leftRight
-        : (math.max(c.backLeftRightRatio, 1.0 - c.backLeftRightRatio) * 100);
-    final bTB = c.backResult != null
-        ? c.backResult!.topBottom
-        : (math.max(c.backTopBottomRatio, 1.0 - c.backTopBottomRatio) * 100);
+    final bLR = c.backResult != null ? c.backResult!.leftRight : (math.max(c.backLeftRightRatio, 1.0 - c.backLeftRightRatio) * 100);
+    final bTB = c.backResult != null ? c.backResult!.topBottom : (math.max(c.backTopBottomRatio, 1.0 - c.backTopBottomRatio) * 100);
 
     String fmt(double val) => '${val.round()}/${100 - val.round()}';
 
@@ -135,14 +98,7 @@ class DefaultGradeEstimatorStrategy implements GradeEstimatorStrategy {
         category: 'Centering',
         score: score,
         description: 'Front ${fmt(fLR)} • Back ${fmt(bLR)}',
-        details: {
-          'frontMeasured': true,
-          'backMeasured': true,
-          'frontLeftRight': fLR,
-          'frontTopBottom': fTB,
-          'backLeftRight': bLR,
-          'backTopBottom': bTB,
-        },
+        details: {'frontMeasured': true, 'backMeasured': true, 'frontLeftRight': fLR, 'frontTopBottom': fTB, 'backLeftRight': bLR, 'backTopBottom': bTB},
       );
     }
 
@@ -191,28 +147,12 @@ class DefaultGradeEstimatorStrategy implements GradeEstimatorStrategy {
       category: 'Centering',
       score: 0.0,
       description: 'Could not be measured',
-      details: {
-        'frontMeasured': false,
-        'backMeasured': false,
-        'unmeasured': true,
-        'note': 'Card borders could not be detected on either side.',
-      },
+      details: {'frontMeasured': false, 'backMeasured': false, 'unmeasured': true, 'note': 'Card borders could not be detected on either side.'},
     );
   }
 
-  double _evaluateCenteringScore(
-    GradingProfile profile,
-    double fLR,
-    double fTB,
-    double bLR,
-    double bTB,
-  ) {
-    final score = profile.centeringScore(
-      frontLeftRight: fLR,
-      frontTopBottom: fTB,
-      backLeftRight: bLR,
-      backTopBottom: bTB,
-    );
+  double _evaluateCenteringScore(GradingProfile profile, double fLR, double fTB, double bLR, double bTB) {
+    final score = profile.centeringScore(frontLeftRight: fLR, frontTopBottom: fTB, backLeftRight: bLR, backTopBottom: bTB);
     if (score != null) return score;
 
     final maxRatio = [fLR, fTB, bLR, bTB].reduce(math.max);
@@ -220,17 +160,8 @@ class DefaultGradeEstimatorStrategy implements GradeEstimatorStrategy {
     return 2.0;
   }
 
-  double _evaluateSideScore(
-    GradingProfile profile,
-    CardSide side,
-    double lr,
-    double tb,
-  ) {
-    final score = profile.centeringScoreForSide(
-      side: side,
-      leftRight: lr,
-      topBottom: tb,
-    );
+  double _evaluateSideScore(GradingProfile profile, CardSide side, double lr, double tb) {
+    final score = profile.centeringScoreForSide(side: side, leftRight: lr, topBottom: tb);
     if (score != null) return score;
 
     final maxRatio = math.max(lr, tb);

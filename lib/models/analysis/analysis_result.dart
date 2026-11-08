@@ -10,11 +10,7 @@ sealed class AnalysisResult {
   final AnalysisCategory category;
   final double confidence;
 
-  const AnalysisResult({
-    required this.analyzerId,
-    required this.category,
-    required this.confidence,
-  });
+  const AnalysisResult({required this.analyzerId, required this.category, required this.confidence});
 }
 
 class CenteringAnalysisResult extends AnalysisResult {
@@ -45,12 +41,7 @@ class EdgeAnalysisResult extends AnalysisResult {
   final double defectPerimeterRatio;
   final double maxDefectLengthPixels;
 
-  const EdgeAnalysisResult({
-    required super.analyzerId,
-    required super.confidence,
-    required this.defectPerimeterRatio,
-    required this.maxDefectLengthPixels,
-  }) : super(category: AnalysisCategory.edges);
+  const EdgeAnalysisResult({required super.analyzerId, required super.confidence, required this.defectPerimeterRatio, required this.maxDefectLengthPixels}) : super(category: AnalysisCategory.edges);
 }
 
 class CornerAnalysisResult extends AnalysisResult {
@@ -78,11 +69,6 @@ class SurfaceAnalysisResult extends AnalysisResult {
   final double defectAreaRatio;
   final CreaseAnalysis? creaseAnalysis;
 
-  const SurfaceAnalysisResult({
-    required super.analyzerId,
-    required super.confidence,
-    required this.defectCount,
-    required this.defectAreaRatio,
-    this.creaseAnalysis,
-  }) : super(category: AnalysisCategory.surface);
+  const SurfaceAnalysisResult({required super.analyzerId, required super.confidence, required this.defectCount, required this.defectAreaRatio, this.creaseAnalysis})
+    : super(category: AnalysisCategory.surface);
 }

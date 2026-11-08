@@ -38,12 +38,7 @@ class CornerWearAnalyzer implements CardAnalyzer {
     } else {
       final (ok, encoded) = cv.imencode('.jpg', input.backImage);
       if (!ok || encoded.isEmpty) {
-        return const CornerAnalysisResult(
-          analyzerId: 'corner_wear',
-          confidence: 0.50,
-          averageCornerWear: 0.0,
-          maxCornerWear: 0.0,
-        );
+        return const CornerAnalysisResult(analyzerId: 'corner_wear', confidence: 0.50, averageCornerWear: 0.0, maxCornerWear: 0.0);
       }
       bytes = encoded;
     }
@@ -77,9 +72,7 @@ class CornerWearAnalyzer implements CardAnalyzer {
     );
   }
 
-  static ({List<CornerInspectionData> corners, JpegData annotatedPhoto})? _isolateAnalyzeStrictWhiteCorners(
-    Uint8List bytes,
-  ) {
+  static ({List<CornerInspectionData> corners, JpegData annotatedPhoto})? _isolateAnalyzeStrictWhiteCorners(Uint8List bytes) {
     if (bytes.isEmpty) return null;
     final img = cv.imdecode(bytes, cv.IMREAD_COLOR);
     try {
@@ -89,9 +82,7 @@ class CornerWearAnalyzer implements CardAnalyzer {
     }
   }
 
-  static ({List<CornerInspectionData> corners, JpegData annotatedPhoto})? _analyzeStrictWhiteCorners(
-    cv.Mat img,
-  ) {
+  static ({List<CornerInspectionData> corners, JpegData annotatedPhoto})? _analyzeStrictWhiteCorners(cv.Mat img) {
     if (img.isEmpty || img.cols < 100 || img.rows < 100) return null;
 
     cv.Mat? gray;
@@ -295,15 +286,10 @@ class CornerWearAnalyzer implements CardAnalyzer {
         cv.drawContours(annotatedCanvas, globalContours, 0, cv.Scalar(0, 0, 255, 0), thickness: cv.FILLED);
         globalContours.dispose();
 
-        final cornerKey = cY < th / 2
-            ? (cX < tw / 2 ? 'Top-Left' : 'Top-Right')
-            : (cX < tw / 2 ? 'Bottom-Left' : 'Bottom-Right');
+        final cornerKey = cY < th / 2 ? (cX < tw / 2 ? 'Top-Left' : 'Top-Right') : (cX < tw / 2 ? 'Bottom-Left' : 'Bottom-Right');
 
         final prev = cornerResults[cornerKey]!;
-        cornerResults[cornerKey] = (
-          defects: prev.defects + 1,
-          maxArea: math.max(prev.maxArea, area),
-        );
+        cornerResults[cornerKey] = (defects: prev.defects + 1, maxArea: math.max(prev.maxArea, area));
       }
       defectContours.dispose();
 
@@ -317,33 +303,16 @@ class CornerWearAnalyzer implements CardAnalyzer {
         final isDamaged = res.defects > 0;
 
         final r = entry.value.rect;
-        cv.rectangle(
-          annotatedCanvas,
-          r,
-          isDamaged ? cv.Scalar(0, 0, 255, 0) : cv.Scalar(0, 230, 230, 0),
-          thickness: isDamaged ? 2 : 1,
-        );
+        cv.rectangle(annotatedCanvas, r, isDamaged ? cv.Scalar(0, 0, 255, 0) : cv.Scalar(0, 230, 230, 0), thickness: isDamaged ? 2 : 1);
 
         if (isDamaged) {
           final badgeX = r.x < (imgW / 2) ? r.x + 10 : r.x - 180;
           final badgeY = r.y < (imgH / 2) ? r.y + r.height + 25 : r.y - 10;
 
-          cv.putText(
-            annotatedCanvas,
-            'CORNER WEAR',
-            cv.Point(badgeX.clamp(5, imgW - 190), badgeY.clamp(20, imgH - 10)),
-            cv.FONT_HERSHEY_SIMPLEX,
-            0.7,
-            cv.Scalar(0, 0, 255, 0),
-            thickness: 2,
-          );
+          cv.putText(annotatedCanvas, 'CORNER WEAR', cv.Point(badgeX.clamp(5, imgW - 190), badgeY.clamp(20, imgH - 10)), cv.FONT_HERSHEY_SIMPLEX, 0.7, cv.Scalar(0, 0, 255, 0), thickness: 2);
         }
 
-        detected.add(CornerInspectionData(
-          name: name,
-          blobArea: res.maxArea,
-          isDamaged: isDamaged,
-        ));
+        detected.add(CornerInspectionData(name: name, blobArea: res.maxArea, isDamaged: isDamaged));
 
         r.dispose();
       }
@@ -351,10 +320,7 @@ class CornerWearAnalyzer implements CardAnalyzer {
       final (okAnnotated, annotatedJpeg) = cv.imencode('.jpg', annotatedCanvas, params: jpegParams);
       if (!okAnnotated) return null;
 
-      return (
-        corners: detected,
-        annotatedPhoto: JpegData(annotatedJpeg),
-      );
+      return (corners: detected, annotatedPhoto: JpegData(annotatedJpeg));
     } finally {
       jpegParams.dispose();
       gray?.dispose();

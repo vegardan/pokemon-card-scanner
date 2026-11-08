@@ -44,20 +44,14 @@ class GradeOverviewPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Grade overview')),
       body: ListView(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          16,
-          20,
-          40 + MediaQuery.paddingOf(context).bottom,
-        ),
+        padding: EdgeInsets.fromLTRB(20, 16, 20, 40 + MediaQuery.paddingOf(context).bottom),
         children: [
           _HeaderCard(card: card, grade: grade, color: color, descriptor: gradeDescriptor(grade)),
           if (report != null && report.subGrades.isNotEmpty) ...[
             const SizedBox(height: 24),
             Text('Sub-grades', style: theme.textTheme.titleMedium),
             const SizedBox(height: 12),
-            for (final subGrade in report.subGrades)
-              _SubGradeCard(card: card, subGrade: subGrade),
+            for (final subGrade in report.subGrades) _SubGradeCard(card: card, subGrade: subGrade),
           ],
           if (report != null && report.notes.isNotEmpty) ...[
             const SizedBox(height: 24),
@@ -97,12 +91,7 @@ class _HeaderCard extends StatelessWidget {
   final Color color;
   final String descriptor;
 
-  const _HeaderCard({
-    required this.card,
-    required this.grade,
-    required this.color,
-    required this.descriptor,
-  });
+  const _HeaderCard({required this.card, required this.grade, required this.color, required this.descriptor});
 
   @override
   Widget build(BuildContext context) {
@@ -126,10 +115,7 @@ class _HeaderCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     child: Text(
                       grade.toString(),
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: theme.textTheme.headlineMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
                     ),
                   ),
                 ),
@@ -141,10 +127,7 @@ class _HeaderCard extends StatelessWidget {
                       Text(descriptor, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
                       Text(card.catalogCard.name, style: theme.textTheme.bodyMedium),
-                      Text(
-                        card.catalogCard.setName,
-                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                      ),
+                      Text(card.catalogCard.setName, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                     ],
                   ),
                 ),
@@ -186,11 +169,8 @@ class _SubGradeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = GradeOverviewPage.gradeColor(subGrade.score);
-    final isClickable = (subGrade.category == 'Corners' ||
-            subGrade.category == 'Centering' ||
-            subGrade.category == 'Creases' ||
-            subGrade.category == 'Surface') &&
-        subGrade.details?['unimplemented'] != true;
+    final isClickable =
+        (subGrade.category == 'Corners' || subGrade.category == 'Centering' || subGrade.category == 'Creases' || subGrade.category == 'Surface') && subGrade.details?['unimplemented'] != true;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -201,28 +181,19 @@ class _SubGradeCard extends StatelessWidget {
                 if (subGrade.category == 'Centering') {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => CenteringDetailsPage(
-                        card: card,
-                        subGrade: subGrade,
-                      ),
+                      builder: (_) => CenteringDetailsPage(card: card, subGrade: subGrade),
                     ),
                   );
                 } else if (subGrade.category == 'Corners') {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => CornerWearDetailsPage(
-                        card: card,
-                        subGrade: subGrade,
-                      ),
+                      builder: (_) => CornerWearDetailsPage(card: card, subGrade: subGrade),
                     ),
                   );
                 } else if (subGrade.category == 'Creases' || subGrade.category == 'Surface') {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => CreaseDetailsPage(
-                        card: card,
-                        subGrade: subGrade,
-                      ),
+                      builder: (_) => CreaseDetailsPage(card: card, subGrade: subGrade),
                     ),
                   );
                 }
@@ -239,10 +210,7 @@ class _SubGradeCard extends StatelessWidget {
                   Row(
                     children: [
                       Text(subGrade.category, style: theme.textTheme.titleMedium),
-                      if (isClickable) ...[
-                        const SizedBox(width: 4),
-                        Icon(Icons.chevron_right, size: 20, color: theme.colorScheme.onSurfaceVariant),
-                      ],
+                      if (isClickable) ...[const SizedBox(width: 4), Icon(Icons.chevron_right, size: 20, color: theme.colorScheme.onSurfaceVariant)],
                     ],
                   ),
                   DecoratedBox(
@@ -255,10 +223,7 @@ class _SubGradeCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       child: Text(
                         subGrade.score > 0 ? subGrade.score.toStringAsFixed(1) : 'N/A',
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: color,
-                          fontWeight: FontWeight.w800,
-                        ),
+                        style: theme.textTheme.labelLarge?.copyWith(color: color, fontWeight: FontWeight.w800),
                       ),
                     ),
                   ),
@@ -279,21 +244,9 @@ class _SubGradeCard extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (subGrade.details?['unimplemented'] == true) ...[
-                      Icon(
-                        Icons.info_outline,
-                        size: 15,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 6),
-                    ],
+                    if (subGrade.details?['unimplemented'] == true) ...[Icon(Icons.info_outline, size: 15, color: theme.colorScheme.onSurfaceVariant), const SizedBox(width: 6)],
                     Expanded(
-                      child: Text(
-                        subGrade.description,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
+                      child: Text(subGrade.description, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                     ),
                   ],
                 ),

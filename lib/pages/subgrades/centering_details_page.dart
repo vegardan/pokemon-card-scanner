@@ -9,11 +9,7 @@ class CenteringDetailsPage extends StatelessWidget {
   final ScannedPokemonCard card;
   final SubGrade subGrade;
 
-  const CenteringDetailsPage({
-    super.key,
-    required this.card,
-    required this.subGrade,
-  });
+  const CenteringDetailsPage({super.key, required this.card, required this.subGrade});
 
   @override
   Widget build(BuildContext context) {
@@ -25,16 +21,9 @@ class CenteringDetailsPage extends StatelessWidget {
         final profile = GradingProfileController.instance.value;
 
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Centering details'),
-          ),
+          appBar: AppBar(title: const Text('Centering details')),
           body: ListView(
-            padding: EdgeInsets.fromLTRB(
-              20,
-              16,
-              20,
-              40 + MediaQuery.paddingOf(context).bottom,
-            ),
+            padding: EdgeInsets.fromLTRB(20, 16, 20, 40 + MediaQuery.paddingOf(context).bottom),
             children: [
               _ScoreSummaryCard(subGrade: subGrade, color: color),
               if (subGrade.details?['note'] != null) ...[
@@ -47,20 +36,10 @@ class CenteringDetailsPage extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.info_outline,
-                          size: 20,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                        Icon(Icons.info_outline, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: Text(
-                            subGrade.details!['note'] as String,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              height: 1.35,
-                            ),
-                          ),
+                          child: Text(subGrade.details!['note'] as String, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.35)),
                         ),
                       ],
                     ),
@@ -71,11 +50,7 @@ class CenteringDetailsPage extends StatelessWidget {
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
-                  child: CenteringDetails(
-                    front: card.frontCentering,
-                    back: card.backCentering,
-                    profile: profile,
-                  ),
+                  child: CenteringDetails(front: card.frontCentering, back: card.backCentering, profile: profile),
                 ),
               ),
             ],
@@ -102,18 +77,12 @@ class _ScoreSummaryCard extends StatelessWidget {
         child: Row(
           children: [
             DecoratedBox(
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(10),
-              ),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.85), borderRadius: BorderRadius.circular(10)),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 child: Text(
                   subGrade.score > 0 ? subGrade.score.toStringAsFixed(1) : 'N/A',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: theme.textTheme.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
                 ),
               ),
             ),
@@ -124,12 +93,7 @@ class _ScoreSummaryCard extends StatelessWidget {
                 children: [
                   Text('Centering', style: theme.textTheme.titleMedium),
                   const SizedBox(height: 4),
-                  Text(
-                    subGrade.description,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
+                  Text(subGrade.description, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                 ],
               ),
             ),

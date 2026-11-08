@@ -1,7 +1,6 @@
-import 'package:pokemon_card_scanner/widgets/crease_overlay.dart';
-
 import 'package:flutter/material.dart';
 import 'package:pokemon_card_scanner/vision/crease_analyzer.dart';
+import 'package:pokemon_card_scanner/widgets/crease_overlay.dart';
 
 class CreaseResultDialog extends StatelessWidget {
   final Future<CreaseResult> analysis;
@@ -25,9 +24,7 @@ class CreaseResultDialog extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Experimental screening for possible creases. Printed graphics and lighting can trigger markers. These are not confirmed damage or a grade.',
-                  ),
+                  const Text('Experimental screening for possible creases. Printed graphics and lighting can trigger markers. These are not confirmed damage or a grade.'),
                   const SizedBox(height: 12),
                   _preview(context, snapshot.data!),
                 ],
@@ -36,12 +33,7 @@ class CreaseResultDialog extends StatelessWidget {
           },
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Continue'),
-        ),
-      ],
+      actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Continue'))],
     );
   }
 
@@ -53,13 +45,8 @@ class CreaseResultDialog extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Back', style: Theme.of(context).textTheme.titleMedium),
-        if (result.candidates.isEmpty)
-          const Text(
-            'No possible creases were found. This does not establish that the card is crease-free.',
-          ),
-        const Text(
-          'Dashed lines indicate possible crease positions, not measured damage lengths.',
-        ),
+        if (result.candidates.isEmpty) const Text('No possible creases were found. This does not establish that the card is crease-free.'),
+        const Text('Dashed lines indicate possible crease positions, not measured damage lengths.'),
         CreaseOverlay(analysis: result, image: MemoryImage(result.preview!)),
       ],
     );

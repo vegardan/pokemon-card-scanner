@@ -15,12 +15,7 @@ final class CatalogPokemonCard implements PokemonCard {
   final String name;
   final String setName;
 
-  const CatalogPokemonCard({
-    required this.id,
-    required this.name,
-    required this.setName,
-    this.imageUrl,
-  });
+  const CatalogPokemonCard({required this.id, required this.name, required this.setName, this.imageUrl});
 
   @override
   CatalogPokemonCard get catalogCard => this;
@@ -50,11 +45,7 @@ final class ScannedPokemonCard implements PokemonCard {
     required this.backImagePath,
     required this.createdAt,
     this.backCreases = CreaseAnalysis.unavailable,
-  }) : assert(
-         estimatedGrading == null ||
-             (estimatedGrading >= 1 && estimatedGrading <= 10),
-         'estimatedGrading must be between 1 and 10',
-       );
+  }) : assert(estimatedGrading == null || (estimatedGrading >= 1 && estimatedGrading <= 10), 'estimatedGrading must be between 1 and 10');
 
   FileImage get frontImage => FileImage(File(frontImagePath));
 

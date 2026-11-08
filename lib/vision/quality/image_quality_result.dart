@@ -8,14 +8,7 @@ class ImageQualityResult {
   final JpegData rawPhoto;
   final JpegData? annotatedGlarePhoto;
 
-  const ImageQualityResult({
-    required this.isBlurry,
-    required this.hasGlare,
-    required this.blurScore,
-    required this.glarePercentage,
-    required this.rawPhoto,
-    this.annotatedGlarePhoto,
-  });
+  const ImageQualityResult({required this.isBlurry, required this.hasGlare, required this.blurScore, required this.glarePercentage, required this.rawPhoto, this.annotatedGlarePhoto});
 
   bool get isValid => !isBlurry && !hasGlare;
 

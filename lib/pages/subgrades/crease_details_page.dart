@@ -10,11 +10,7 @@ class CreaseDetailsPage extends StatelessWidget {
   final ScannedPokemonCard card;
   final SubGrade subGrade;
 
-  const CreaseDetailsPage({
-    super.key,
-    required this.card,
-    required this.subGrade,
-  });
+  const CreaseDetailsPage({super.key, required this.card, required this.subGrade});
 
   @override
   Widget build(BuildContext context) {
@@ -26,12 +22,7 @@ class CreaseDetailsPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Crease details')),
       body: ListView(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          16,
-          20,
-          40 + MediaQuery.paddingOf(context).bottom,
-        ),
+        padding: EdgeInsets.fromLTRB(20, 16, 20, 40 + MediaQuery.paddingOf(context).bottom),
         children: [
           _ScoreSummaryCard(subGrade: subGrade, color: color),
           const SizedBox(height: 20),
@@ -43,14 +34,8 @@ class CreaseDetailsPage extends StatelessWidget {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: creaseAnalysis.evaluated && creaseAnalysis.width > 0 && creaseAnalysis.height > 0
-                      ? CreaseOverlay(
-                          analysis: creaseAnalysis,
-                          image: card.backImage,
-                        )
-                      : Image(
-                          image: card.backImage,
-                          fit: BoxFit.contain,
-                        ),
+                      ? CreaseOverlay(analysis: creaseAnalysis, image: card.backImage)
+                      : Image(image: card.backImage, fit: BoxFit.contain),
                 ),
               ),
             ),
@@ -64,19 +49,12 @@ class CreaseDetailsPage extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 20,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+                  Icon(Icons.info_outline, size: 20, color: theme.colorScheme.onSurfaceVariant),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Experimental screening for possible creases. Printed graphics and lighting can trigger markers. Dashed lines indicate possible crease positions, not measured damage lengths.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        height: 1.35,
-                      ),
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant, height: 1.35),
                     ),
                   ),
                 ],
@@ -107,18 +85,12 @@ class _ScoreSummaryCard extends StatelessWidget {
         child: Row(
           children: [
             DecoratedBox(
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(10),
-              ),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.85), borderRadius: BorderRadius.circular(10)),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 child: Text(
                   subGrade.score.toStringAsFixed(1),
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: theme.textTheme.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
                 ),
               ),
             ),
@@ -129,12 +101,7 @@ class _ScoreSummaryCard extends StatelessWidget {
                 children: [
                   Text('Creases', style: theme.textTheme.titleMedium),
                   const SizedBox(height: 4),
-                  Text(
-                    subGrade.description,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
+                  Text(subGrade.description, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                 ],
               ),
             ),
@@ -159,13 +126,9 @@ class _CreaseStatusSection extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Detected crease candidates (${analysis.candidates.length})',
-              style: theme.textTheme.titleMedium,
-            ),
+            Text('Detected crease candidates (${analysis.candidates.length})', style: theme.textTheme.titleMedium),
             const SizedBox(height: 10),
-            for (var i = 0; i < analysis.candidates.length; i++)
-              _CandidateCard(index: i + 1, candidate: analysis.candidates[i]),
+            for (var i = 0; i < analysis.candidates.length; i++) _CandidateCard(index: i + 1, candidate: analysis.candidates[i]),
           ],
         );
 
@@ -181,17 +144,9 @@ class _CreaseStatusSection extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'No creases detected',
-                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-                      ),
+                      Text('No creases detected', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
                       const SizedBox(height: 2),
-                      Text(
-                        'No possible creases were found during screening.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
+                      Text('No possible creases were found during screening.', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                     ],
                   ),
                 ),
@@ -212,16 +167,11 @@ class _CreaseStatusSection extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Crease screening not evaluated',
-                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-                      ),
+                      Text('Crease screening not evaluated', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
                       const SizedBox(height: 2),
                       Text(
                         analysis.notEvaluatedReason ?? 'Crease analysis could not be completed for this scan.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -256,10 +206,7 @@ class _CandidateCard extends StatelessWidget {
               backgroundColor: Colors.red.withValues(alpha: 0.15),
               child: Text(
                 '$index',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: Colors.red.shade700,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: theme.textTheme.labelMedium?.copyWith(color: Colors.red.shade700, fontWeight: FontWeight.bold),
               ),
             ),
             const SizedBox(width: 14),
@@ -267,31 +214,20 @@ class _CandidateCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Candidate #$index',
-                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                  ),
+                  Text('Candidate #$index', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 2),
                   Text(
                     'Angle: ${candidate.angle.toStringAsFixed(1)}° • Span: (${candidate.x1.round()}, ${candidate.y1.round()}) to (${candidate.x2.round()}, ${candidate.y2.round()})',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
             ),
             DecoratedBox(
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(6),
-              ),
+              decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(6)),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: Text(
-                  '$prominencePct% prom.',
-                  style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
-                ),
+                child: Text('$prominencePct% prom.', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600)),
               ),
             ),
           ],

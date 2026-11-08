@@ -14,14 +14,5 @@ class AnalysisInput {
   final CenteringResult? frontCentering;
   final CenteringResult? backCentering;
 
-  const AnalysisInput({
-    required this.frontImage,
-    required this.backImage,
-    required this.catalogCard,
-    this.frontPhoto,
-    this.backPhoto,
-    this.backCreases,
-    this.frontCentering,
-    this.backCentering,
-  });
+  const AnalysisInput({required this.frontImage, required this.backImage, required this.catalogCard, this.frontPhoto, this.backPhoto, this.backCreases, this.frontCentering, this.backCentering});
 }

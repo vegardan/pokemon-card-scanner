@@ -23,9 +23,7 @@ class _CenteringDetailsState extends State<CenteringDetails> {
   @override
   void initState() {
     super.initState();
-    _side = widget.front != null
-        ? CardSide.front
-        : (widget.back != null ? CardSide.back : CardSide.front);
+    _side = widget.front != null ? CardSide.front : (widget.back != null ? CardSide.back : CardSide.front);
   }
 
   Widget _sideEstimate(BuildContext context, CardSide side) {

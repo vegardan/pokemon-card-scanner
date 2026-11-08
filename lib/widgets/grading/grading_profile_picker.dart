@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:pokemon_card_scanner/models/grading_profile.dart';
 import 'package:pokemon_card_scanner/controllers/grading_profile_controller.dart';
+import 'package:pokemon_card_scanner/models/grading_profile.dart';
 
 class GradingProfileChip extends StatelessWidget {
   const GradingProfileChip({super.key});

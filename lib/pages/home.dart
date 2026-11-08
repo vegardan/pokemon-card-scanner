@@ -38,16 +38,10 @@ class _HomePageState extends State<HomePage> {
       if (!mounted || ready != true) return;
     }
 
-    final scanResult = await Navigator.of(context).push<
-      ({
-        JpegData front,
-        JpegData back,
-        CatalogPokemonCard catalogCard,
-        CenteringResult? frontCentering,
-        CenteringResult? backCentering,
-        CreaseAnalysis backCreases,
-      })
-    >(MaterialPageRoute(builder: (_) => const ScanPage()));
+    final scanResult = await Navigator.of(context)
+        .push<({JpegData front, JpegData back, CatalogPokemonCard catalogCard, CenteringResult? frontCentering, CenteringResult? backCentering, CreaseAnalysis backCreases})>(
+          MaterialPageRoute(builder: (_) => const ScanPage()),
+        );
 
     if (!mounted || scanResult == null) return;
 
