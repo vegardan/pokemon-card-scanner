@@ -7,10 +7,9 @@ import 'package:skeletonizer/skeletonizer.dart';
 
 class PokemonCardWidget extends StatelessWidget {
   final PokemonCard card;
-  final GradingProfile profile;
   final VoidCallback? onTap;
 
-  const PokemonCardWidget({super.key, required this.card, this.onTap, this.profile = GradingProfile.psa});
+  const PokemonCardWidget({super.key, required this.card, this.onTap});
 
   static const _emptyCardImage = AssetImage('assets/pokemon_back_monochrome.png');
 
@@ -23,7 +22,7 @@ class PokemonCardWidget extends StatelessWidget {
     final back = scannedCard?.backCentering;
     final estimatedGrade = front == null || back == null
         ? null
-        : profile.centeringScore(frontLeftRight: front.leftRight, frontTopBottom: front.topBottom, backLeftRight: back.leftRight, backTopBottom: back.topBottom);
+        : GradingProfile.psa.centeringScore(frontLeftRight: front.leftRight, frontTopBottom: front.topBottom, backLeftRight: back.leftRight, backTopBottom: back.topBottom);
     final cardTitle = catalogCard.name;
     final setText = catalogCard.setName;
 

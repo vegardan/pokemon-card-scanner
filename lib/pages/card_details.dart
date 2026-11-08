@@ -1,12 +1,11 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:pokemon_card_scanner/controllers/grading_profile_controller.dart';
+import 'package:pokemon_card_scanner/models/grading_profile.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
 import 'package:pokemon_card_scanner/repositories/scanned_card_repository.dart';
 import 'package:pokemon_card_scanner/vision/card_constants.dart';
 import 'package:pokemon_card_scanner/widgets/grading/centering_details.dart';
 import 'package:pokemon_card_scanner/widgets/grading/grade_badge.dart';
-import 'package:pokemon_card_scanner/widgets/grading/grading_profile_picker.dart';
 import 'package:pokemon_card_scanner/widgets/grading/grading_section.dart';
 import 'package:pokemon_card_scanner/widgets/image_carousel/image_carousel.dart';
 
@@ -38,70 +37,55 @@ class _CardDetailsPage extends StatelessWidget {
     final catalogCard = card.catalogCard;
     final scannedCard = card is ScannedPokemonCard ? card as ScannedPokemonCard : null;
     final title = catalogCard.name;
-    return ListenableBuilder(
-      listenable: GradingProfileController.instance,
-      builder: (context, _) {
-        final profile = GradingProfileController.instance.value;
-        final front = scannedCard?.frontCentering;
-        final back = scannedCard?.backCentering;
-        final grade = front == null || back == null
-            ? null
-            : profile.centeringScore(frontLeftRight: front.leftRight, frontTopBottom: front.topBottom, backLeftRight: back.leftRight, backTopBottom: back.topBottom);
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(title),
-            actions: [
-              if (scannedCard != null)
-                const Padding(
-                  padding: EdgeInsets.only(right: 12),
-                  child: Center(child: GradingProfileChip()),
-                ),
-            ],
-          ),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-            children: [
-              Center(child: _CardImageCarousel(card: card)),
-              const SizedBox(height: 24),
-              Text(title, style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 16),
-              if (scannedCard != null)
-                _DetailRow(
-                  label: 'Estimated grade',
-                  value: grade == null
-                      ? const Text('Unavailable')
-                      : Align(
-                          alignment: Alignment.centerLeft,
-                          child: GradeBadge(grade: grade, profileName: profile.shortName),
-                        ),
-                ),
-              _DetailRow(label: 'Set', value: Text(catalogCard.setName)),
-              _DetailRow(label: 'Card ID', value: Text(catalogCard.id)),
-              if (scannedCard != null) ...[
-                _DetailRow(
-                  label: 'Scanned',
-                  value: Text('${MaterialLocalizations.of(context).formatShortDate(scannedCard.createdAt.toLocal())} ${TimeOfDay.fromDateTime(scannedCard.createdAt.toLocal()).format(context)}'),
-                ),
-                const SizedBox(height: 16),
-                _GradingBreakdown(card: scannedCard),
-                const SizedBox(height: 24),
-                OutlinedButton.icon(
-                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogCardDetailsPage(catalogCard))),
-                  icon: const Icon(Icons.collections_bookmark_outlined),
-                  label: const Text('View in catalog'),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () => _deleteCard(context, scannedCard),
-                  style: OutlinedButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('Delete card'),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
+    final front = scannedCard?.frontCentering;
+    final back = scannedCard?.backCentering;
+    final grade = front == null || back == null
+        ? null
+        : GradingProfile.psa.centeringScore(frontLeftRight: front.leftRight, frontTopBottom: front.topBottom, backLeftRight: back.leftRight, backTopBottom: back.topBottom);
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        children: [
+          Center(child: _CardImageCarousel(card: card)),
+          const SizedBox(height: 24),
+          Text(title, style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: 16),
+          if (scannedCard != null)
+            _DetailRow(
+              label: 'Estimated grade',
+              value: grade == null
+                  ? const Text('Unavailable')
+                  : Align(
+                      alignment: Alignment.centerLeft,
+                      child: GradeBadge(grade: grade, showPsaLabel: true),
+                    ),
+            ),
+          _DetailRow(label: 'Set', value: Text(catalogCard.setName)),
+          _DetailRow(label: 'Card ID', value: Text(catalogCard.id)),
+          if (scannedCard != null) ...[
+            _DetailRow(
+              label: 'Scanned',
+              value: Text('${MaterialLocalizations.of(context).formatShortDate(scannedCard.createdAt.toLocal())} ${TimeOfDay.fromDateTime(scannedCard.createdAt.toLocal()).format(context)}'),
+            ),
+            const SizedBox(height: 16),
+            _GradingBreakdown(card: scannedCard),
+            const SizedBox(height: 24),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogCardDetailsPage(catalogCard))),
+              icon: const Icon(Icons.collections_bookmark_outlined),
+              label: const Text('View in catalog'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () => _deleteCard(context, scannedCard),
+              style: OutlinedButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+              icon: const Icon(Icons.delete_outline),
+              label: const Text('Delete card'),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -204,10 +188,7 @@ class _GradingBreakdown extends StatelessWidget {
           title: 'Centering',
           subtitle: 'Front and back border balance',
           icon: Icons.center_focus_strong_outlined,
-          child: ListenableBuilder(
-            listenable: GradingProfileController.instance,
-            builder: (context, _) => CenteringDetails(front: card.frontCentering, back: card.backCentering, profile: GradingProfileController.instance.value),
-          ),
+          child: CenteringDetails(front: card.frontCentering, back: card.backCentering),
         ),
       ],
     );

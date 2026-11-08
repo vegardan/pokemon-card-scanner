@@ -9,9 +9,8 @@ import 'package:pokemon_card_scanner/widgets/image_carousel/fullscreen_image_gal
 class CenteringDetails extends StatefulWidget {
   final CenteringResult? front;
   final CenteringResult? back;
-  final GradingProfile profile;
 
-  const CenteringDetails({super.key, required this.front, required this.back, required this.profile});
+  const CenteringDetails({super.key, required this.front, required this.back});
 
   @override
   State<CenteringDetails> createState() => _CenteringDetailsState();
@@ -22,14 +21,14 @@ class _CenteringDetailsState extends State<CenteringDetails> {
 
   Widget _sideEstimate(BuildContext context, CardSide side) {
     final result = side == CardSide.front ? widget.front : widget.back;
-    final grade = result == null ? null : widget.profile.centeringScoreForSide(side: side, leftRight: result.leftRight, topBottom: result.topBottom);
+    final grade = result == null ? null : GradingProfile.psa.centeringScoreForSide(side: side, leftRight: result.leftRight, topBottom: result.topBottom);
     final theme = Theme.of(context);
     return Wrap(
       spacing: 10,
       runSpacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        if (grade != null) GradeBadge(grade: grade, profileName: widget.profile.shortName),
+        if (grade != null) GradeBadge(grade: grade, showPsaLabel: true),
         Text('${side == CardSide.front ? 'Front' : 'Back'} ${grade == null ? 'grade unavailable' : 'estimate'}', style: theme.textTheme.titleSmall),
       ],
     );
