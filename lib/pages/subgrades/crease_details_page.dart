@@ -24,7 +24,7 @@ class CreaseDetailsPage extends StatelessWidget {
     final cardAspectRatio = CardConstants.cardAspectRatio;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Surface details')),
+      appBar: AppBar(title: const Text('Crease details')),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
           20,
@@ -127,7 +127,7 @@ class _ScoreSummaryCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Surface', style: theme.textTheme.titleMedium),
+                  Text('Creases', style: theme.textTheme.titleMedium),
                   const SizedBox(height: 4),
                   Text(
                     subGrade.description,
@@ -218,7 +218,7 @@ class _CreaseStatusSection extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        analysis.notEvaluatedReason ?? 'Surface analysis could not be completed for this scan.',
+                        analysis.notEvaluatedReason ?? 'Crease analysis could not be completed for this scan.',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),

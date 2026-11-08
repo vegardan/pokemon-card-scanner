@@ -6,7 +6,6 @@ import 'package:pokemon_card_scanner/pages/grade_overview.dart';
 import 'package:pokemon_card_scanner/repositories/scanned_card_repository.dart';
 import 'package:pokemon_card_scanner/vision/card_constants.dart';
 import 'package:pokemon_card_scanner/widgets/grading/grade_badge.dart';
-import 'package:pokemon_card_scanner/widgets/grading/grading_profile_picker.dart';
 import 'package:pokemon_card_scanner/widgets/image_carousel/image_carousel.dart';
 
 class OwnedCardDetailsPage extends StatelessWidget {
@@ -57,17 +56,12 @@ class CardDetailsPage extends StatelessWidget {
           appBar: AppBar(
             title: Text(title),
             actions: [
-              if (scannedCard != null) ...[
-                const Padding(
-                  padding: EdgeInsets.only(right: 4),
-                  child: Center(child: GradingProfileChip()),
-                ),
+              if (scannedCard != null)
                 IconButton(
                   tooltip: 'Delete card',
                   icon: const Icon(Icons.delete_outline),
                   onPressed: () => _deleteCard(context, scannedCard),
                 ),
-              ],
             ],
           ),
           body: ListView(

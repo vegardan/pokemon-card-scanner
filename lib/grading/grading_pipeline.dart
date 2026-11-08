@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:pokemon_card_scanner/grading/strategies/default_grade_estimator_strategy.dart';
 import 'package:pokemon_card_scanner/grading/strategies/grade_estimator_strategy.dart';
+import 'package:pokemon_card_scanner/grading/strategies/psa_grade_estimator_strategy.dart';
 import 'package:pokemon_card_scanner/models/analysis/analysis_input.dart';
 import 'package:pokemon_card_scanner/models/analysis/analysis_result.dart';
 import 'package:pokemon_card_scanner/models/analysis/estimated_grade.dart';
@@ -23,7 +23,7 @@ class GradingPipeline {
 
   GradingPipeline({
     List<CardAnalyzer>? analyzers,
-    this.strategy = const DefaultGradeEstimatorStrategy(),
+    this.strategy = const PSAGradeEstimatorStrategy(),
   }) : analyzers = analyzers ?? defaultAnalyzers;
 
   static const List<CardAnalyzer> defaultAnalyzers = [

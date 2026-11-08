@@ -18,7 +18,15 @@ class CenteringDetails extends StatefulWidget {
 }
 
 class _CenteringDetailsState extends State<CenteringDetails> {
-  CardSide _side = CardSide.front;
+  late CardSide _side;
+
+  @override
+  void initState() {
+    super.initState();
+    _side = widget.front != null
+        ? CardSide.front
+        : (widget.back != null ? CardSide.back : CardSide.front);
+  }
 
   Widget _sideEstimate(BuildContext context, CardSide side) {
     final result = side == CardSide.front ? widget.front : widget.back;

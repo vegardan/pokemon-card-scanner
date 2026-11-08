@@ -188,6 +188,7 @@ class _SubGradeCard extends StatelessWidget {
     final color = GradeOverviewPage.gradeColor(subGrade.score);
     final isClickable = (subGrade.category == 'Corners' ||
             subGrade.category == 'Centering' ||
+            subGrade.category == 'Creases' ||
             subGrade.category == 'Surface') &&
         subGrade.details?['unimplemented'] != true;
 
@@ -215,7 +216,7 @@ class _SubGradeCard extends StatelessWidget {
                       ),
                     ),
                   );
-                } else if (subGrade.category == 'Surface') {
+                } else if (subGrade.category == 'Creases' || subGrade.category == 'Surface') {
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => CreaseDetailsPage(

@@ -82,12 +82,16 @@ class _CardGradingPageState extends State<CardGradingPage> {
           .whereType<CornerAnalysisResult>()
           .firstOrNull;
 
+      final centeringResult = runResult.results
+          .whereType<CenteringAnalysisResult>()
+          .firstOrNull;
+
       final savedCard = await ScannedCardRepository.instance.save(
         widget.frontPhoto,
         widget.backPhoto,
         widget.catalogCard,
-        frontCentering: widget.frontCentering,
-        backCentering: widget.backCentering,
+        frontCentering: widget.frontCentering ?? centeringResult?.frontResult,
+        backCentering: widget.backCentering ?? centeringResult?.backResult,
         backCreases: widget.backCreases,
         estimatedGrade: runResult.grade,
         annotatedFrontCorners: cornerResult?.annotatedFrontPhoto,

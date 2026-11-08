@@ -4,7 +4,6 @@ import 'package:pokemon_card_scanner/models/analysis/estimated_grade.dart';
 import 'package:pokemon_card_scanner/models/pokemon_card.dart';
 import 'package:pokemon_card_scanner/pages/grade_overview.dart';
 import 'package:pokemon_card_scanner/widgets/grading/centering_details.dart';
-import 'package:pokemon_card_scanner/widgets/grading/grading_profile_picker.dart';
 
 class CenteringDetailsPage extends StatelessWidget {
   final ScannedPokemonCard card;
@@ -28,12 +27,6 @@ class CenteringDetailsPage extends StatelessWidget {
         return Scaffold(
           appBar: AppBar(
             title: const Text('Centering details'),
-            actions: const [
-              Padding(
-                padding: EdgeInsets.only(right: 12),
-                child: Center(child: GradingProfileChip()),
-              ),
-            ],
           ),
           body: ListView(
             padding: EdgeInsets.fromLTRB(

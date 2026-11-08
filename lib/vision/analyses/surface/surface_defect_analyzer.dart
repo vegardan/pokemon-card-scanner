@@ -13,7 +13,7 @@ class SurfaceDefectAnalyzer implements CardAnalyzer {
   String get id => 'surface_defect';
 
   @override
-  String get displayName => 'Surface Defects';
+  String get displayName => 'Creases';
 
   @override
   AnalysisCategory get category => AnalysisCategory.surface;

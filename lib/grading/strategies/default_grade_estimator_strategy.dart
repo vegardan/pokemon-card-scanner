@@ -74,12 +74,12 @@ class DefaultGradeEstimatorStrategy implements GradeEstimatorStrategy {
             description = '${s.defectCount} possible crease(s) detected';
           } else {
             score = 9.5;
-            description = 'No obvious creases or surface defects';
+            description = 'No obvious creases detected';
           }
 
           subGrades.add(
             SubGrade(
-              category: 'Surface',
+              category: 'Creases',
               score: score,
               description: description,
               details: {
