@@ -60,10 +60,12 @@ the [dataset builder guide](tool/dataset/README.md) for generation instructions.
 - [x] **FR9:** Let the user view saved cards and their details.
 - [x] **FR10:** Let the user delete a saved card.
 - [x] **FR11:** Let the user browse the card catalog.
-- [ ] **FR12:** Detect the card’s physical edges and produce a straightened image for analysis.
-- [ ] **FR13:** Measure centering (left and right, top and bottom) on the front and back.
+- [x] **FR12:** Detect the card’s physical edges and produce a straightened image for analysis.
+- [x] **FR13:** Measure centering (left and right, top and bottom) on the front and back.
 - [ ] **FR14:** Detect whitening/damages on edges/corners of the back of the card.
 - [ ] **FR15:** Detect whitening/damages on edges/corners of the front of the card.
-- [ ] **FR16:** Show the result for each measured condition factor.
-- [ ] **FR17:** Based on the condition analysis result, estimate (not guarantee) a grade from 1–10 per factor and in
+- [x] **FR16:** Show the result for each measured condition factor.
+- [x] **FR17:** Based on the condition analysis result, estimate (not guarantee) a grade from 1–10 per factor and in
   total.
+- [x] **FR18:** Detect blur and glare, and reject the photo early if either is detected.
+- [x] **FR19:** Detect creases on the back of the card.
